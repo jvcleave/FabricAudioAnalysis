@@ -10,13 +10,17 @@ dependency. It defines immutable analysis values, a 2048-point FFT frame
 analyzer, and a streaming onset detector. The analyzer emits raw RMS,
 loudness, five frequency-band energies, spectral flux, and spectral centroid.
 
-The `.fabricplugin` development bundle registers **Audio File Analysis** and
-**Live Audio Analysis** with stable, typed ports. The file node decodes a
-selected audio file in bounded chunks and publishes compact, source-normalized
-measurements at graph time. The live node captures the system default
-microphone, analyzes samples outside Fabric's render call, and publishes the
+The `.fabricplugin` development bundle registers **Audio File Analysis**,
+**Live Audio Analysis**, and **Audio 3D Waveform** with stable, typed ports. The
+file node decodes a selected audio file in bounded chunks and publishes
+compact, source-normalized measurements at graph time. The live node captures
+the system default microphone, analyzes samples outside Fabric's render call, and publishes the
 newest completed frame. Its fixed-size sample ring drops old samples if
 analysis falls behind instead of building an unbounded queue.
+Both sources also publish 24 signed waveform rows with 192 samples each. File
+rows are quantized to one byte per sample during analysis, and live capture
+keeps only its 24 newest rows. This gives the visualizer a bounded input
+without retaining full PCM windows.
 
 For the file node, choose an audio file in its settings and set the analysis
 FPS (default 30). `Ready` stays false while analysis runs. Once ready, a
@@ -34,10 +38,17 @@ version uses the system default microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric
 Editor does so already.
 
-Two example graphs are in [FabricScenes](FabricScenes/README.md). Each uses the
+Four example graphs are in [FabricScenes](FabricScenes/README.md). The box examples use the
 source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
 machine-specific bookmark.
+The waveform examples connect a source's Waveform History to Audio 3D Waveform,
+then show its Image on an Image Mesh. The visualizer uses a bundled Metal
+shader adapted from MESS's `Audio3DWaveformVisualizerFilter` and encodes into
+Fabric's command buffer. It draws perspective waveform layers, with controls
+for image size, row count, amplitude, thickness, spacing, rotation, scale,
+fade, color, and background alpha. MESS's text, scan, and bloom overlays are
+outside this first version.
 
 ## Node port reference
 
@@ -65,6 +76,7 @@ sources do not imply equal absolute sound levels.
 | Fast Envelope | Output | Float | 0 before data | Normalized RMS envelope with fast release |
 | Medium Envelope | Output | Float | 0 before data | Normalized RMS envelope with medium release |
 | Slow Envelope | Output | Float | 0 before data | Normalized RMS envelope with slow release |
+| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for Audio 3D Waveform |
 
 ### Audio File Analysis
 
@@ -87,6 +99,18 @@ sources do not imply equal absolute sound levels.
 | Enabled | Input | Bool | true | Allows capture while the graph runs |
 | Running | Output | Bool | false | True after the microphone engine starts |
 | Sample Rate | Output | Float | 0 before capture | Input sample rate in Hz |
+
+### Audio 3D Waveform
+
+| Port | Direction | Fabric type | Default or requirement | Description |
+| --- | --- | --- | --- | --- |
+| Waveform History | Input | Array of Float | 24 × 192 signed samples | Connect either audio source's Waveform History |
+| Width / Height | Input | Int | 1280 / 720 | Output image size in pixels |
+| History | Input | Int | 24 | Number of newest rows to draw |
+| Amplitude / Line Thickness / Spacing | Input | Float | 0.6 / 1.5 / 1.1 | Waveform displacement, pixel radius, and depth spacing |
+| Angle X / Angle Y / Scale / Fade | Input | Float | 0.43 / -0.23 / 1.98 / 0 | Perspective and depth styling |
+| Color / Transparent Background | Input | Vector 4 / Bool | Green / false | Line color and background alpha |
+| Image | Output | Fabric Image | Rendered each graph pass | Perspective waveform texture |
 
 Run the focused core checks with:
 
@@ -116,6 +140,12 @@ After building, check registration and graph save/reopen through Fabric's own
 
 ```sh
 sh PluginVerification/verify.sh
+```
+
+Regenerate and GPU-check the waveform examples with:
+
+```sh
+sh PluginVerification/verify.sh --write-waveform-samples
 ```
 
 `PluginVerification/Package.resolved` matches the selected Fabric checkout's

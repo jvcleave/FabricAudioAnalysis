@@ -1,6 +1,7 @@
 import Foundation
 
-/// Compact whole-file measurements. Frame samples are discarded during decoding.
+/// Compact whole-file measurements and quantized waveform previews. Full PCM
+/// windows are discarded during decoding.
 public struct AudioFileAnalysis: Sendable
 {
     public let sampleRate: Float
@@ -8,6 +9,7 @@ public struct AudioFileAnalysis: Sendable
     public let framesPerSecond: Float
     public let averageBPM: Float
     public let frames: [AudioAnalysisSnapshot]
+    public let waveformRows: [AudioWaveformRow]
 
     public var frameCount: Int { frames.count }
 
@@ -16,7 +18,8 @@ public struct AudioFileAnalysis: Sendable
         durationSeconds: Float,
         framesPerSecond: Float,
         averageBPM: Float,
-        frames: [AudioAnalysisSnapshot]
+        frames: [AudioAnalysisSnapshot],
+        waveformRows: [AudioWaveformRow]
     )
     {
         self.sampleRate = sampleRate
@@ -24,6 +27,7 @@ public struct AudioFileAnalysis: Sendable
         self.framesPerSecond = framesPerSecond
         self.averageBPM = averageBPM
         self.frames = frames
+        self.waveformRows = waveformRows
     }
 
     /// Graph-time lookup is independent of processing order, so backward
@@ -45,5 +49,17 @@ public struct AudioFileAnalysis: Sendable
 
         let frameIndex = min(Int(selectedTime * framesPerSecond), frames.count - 1)
         return frames[frameIndex]
+    }
+
+    public func waveformHistory(endingAt frameIndex: Int) -> ContiguousArray<Float>
+    {
+        guard waveformRows.indices.contains(frameIndex) else
+        {
+            return AudioWaveformRow.flattenedHistory([])
+        }
+        let firstFrame = max(0, frameIndex - AudioWaveformRow.maximumHistoryRows + 1)
+        return AudioWaveformRow.flattenedHistory(
+            waveformRows[firstFrame ... frameIndex]
+        )
     }
 }

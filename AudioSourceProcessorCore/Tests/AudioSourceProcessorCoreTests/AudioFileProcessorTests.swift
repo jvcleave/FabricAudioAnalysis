@@ -31,6 +31,9 @@ final class AudioFileProcessorTests: XCTestCase
         )
         XCTAssertEqual(analysis.frames.map(\.rmsNormalized).max(), 1)
         XCTAssertTrue(analysis.frames.allSatisfy { $0.rmsNormalized.isFinite })
+        XCTAssertEqual(analysis.waveformRows.count, analysis.frameCount)
+        XCTAssertTrue(analysis.waveformHistory(endingAt: 0).allSatisfy { $0 == 0 })
+        XCTAssertTrue(analysis.waveformHistory(endingAt: 15).contains { abs($0) > 0.5 })
 
         XCTAssertEqual(analysis.frame(at: 0.9, loop: false)?.frameIndex, 27)
         XCTAssertEqual(analysis.frame(at: 0.1, loop: false)?.frameIndex, 3)

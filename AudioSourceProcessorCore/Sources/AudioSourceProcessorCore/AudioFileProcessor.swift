@@ -114,6 +114,7 @@ public final class AudioFileProcessor
         try accumulator.finish()
         return AudioFileSnapshotBuilder.build(
             measurements: accumulator.measurements,
+            waveformRows: accumulator.waveformRows,
             sampleRate: sampleRate,
             totalSamples: totalSamples,
             hopSize: hopSize
@@ -127,6 +128,7 @@ private struct AudioFileFrameAccumulator
     let hopSize: Int
     let analyzer: AudioFrameAnalyzer
     private(set) var measurements: [AudioFrameMeasurements] = []
+    private(set) var waveformRows: [AudioWaveformRow] = []
     private var pendingSamples: [Float] = []
     private var consumedSampleCount = 0
 
@@ -174,6 +176,9 @@ private struct AudioFileFrameAccumulator
                 sampleRate: sampleRate,
                 rmsSampleCount: rmsSampleCount
             ))
+            waveformRows.append(AudioWaveformRow(
+                frameSamples.prefix(rmsSampleCount)
+            ))
             consumedSampleCount += rmsSampleCount
 
             if consumedSampleCount >= 8192
@@ -189,6 +194,7 @@ private enum AudioFileSnapshotBuilder
 {
     static func build(
         measurements: [AudioFrameMeasurements],
+        waveformRows: [AudioWaveformRow],
         sampleRate: Float,
         totalSamples: Int,
         hopSize: Int
@@ -267,7 +273,8 @@ private enum AudioFileSnapshotBuilder
             durationSeconds: duration,
             framesPerSecond: frameRate,
             averageBPM: averageBPM,
-            frames: frames
+            frames: frames,
+            waveformRows: waveformRows
         )
     }
 

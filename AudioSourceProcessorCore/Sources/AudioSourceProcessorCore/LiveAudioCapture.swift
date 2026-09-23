@@ -24,6 +24,18 @@ public enum LiveAudioCaptureError: LocalizedError
     }
 }
 
+public struct LiveAudioCapturedFrame: Sendable
+{
+    public let snapshot: AudioAnalysisSnapshot
+    public let waveformRow: AudioWaveformRow
+
+    public init(snapshot: AudioAnalysisSnapshot, waveformRow: AudioWaveformRow)
+    {
+        self.snapshot = snapshot
+        self.waveformRow = waveformRow
+    }
+}
+
 /// One capture session belongs to one graph execution generation. It keeps
 /// AVAudioEngine off Fabric's render call and never retains PCM in snapshots.
 public final class LiveAudioCapture
@@ -116,7 +128,7 @@ public final class LiveAudioCapture
     /// A single task drains the bounded ring. The audio callback schedules no
     /// work, and this loop checks cancellation between small processing batches.
     public func run(
-        onSnapshot: @escaping @Sendable (AudioAnalysisSnapshot) -> Void
+        onFrame: @escaping @Sendable (LiveAudioCapturedFrame) -> Void
     ) async throws
     {
         guard let sampleRing,
@@ -146,7 +158,10 @@ public final class LiveAudioCapture
                     rmsSampleCount: hopSize,
                     sampleRate: sampleRate
                 )
-                onSnapshot(snapshot)
+                onFrame(LiveAudioCapturedFrame(
+                    snapshot: snapshot,
+                    waveformRow: AudioWaveformRow(frameSamples.prefix(hopSize))
+                ))
                 consumedSampleCount += hopSize
                 if consumedSampleCount >= 8192
                 {

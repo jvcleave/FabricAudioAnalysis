@@ -12,6 +12,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         let isRunning: Bool
         let sampleRate: Float
         let snapshot: AudioAnalysisSnapshot?
+        let waveformRows: [AudioWaveformRow]
         let errorDescription: String?
     }
 
@@ -23,6 +24,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
     private var isRunning = false
     private var sampleRate: Float = 0
     private var latestSnapshot: AudioAnalysisSnapshot?
+    private var waveformRows: [AudioWaveformRow] = []
     private var hasPendingOnset = false
     private var errorDescription: String?
     private var captureTask: Task<Void, Never>?
@@ -95,8 +97,8 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
                 )
                 storeReference.value?.markRunning(requestGeneration, sampleRate: sampleRate)
                 try await capture.run
-                { snapshot in
-                    storeReference.value?.receive(requestGeneration, snapshot: snapshot)
+                { frame in
+                    storeReference.value?.receive(requestGeneration, frame: frame)
                 }
             }
             catch is CancellationError
@@ -126,6 +128,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
             isRunning: isRunning,
             sampleRate: sampleRate,
             snapshot: snapshot,
+            waveformRows: waveformRows,
             errorDescription: errorDescription
         )
     }
@@ -143,6 +146,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         isRunning = false
         sampleRate = 0
         latestSnapshot = nil
+        waveformRows.removeAll(keepingCapacity: true)
         hasPendingOnset = false
         errorDescription = nil
     }
@@ -157,12 +161,18 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         revision += 1
     }
 
-    private func receive(_ requestGeneration: Int, snapshot: AudioAnalysisSnapshot)
+    private func receive(_ requestGeneration: Int, frame: LiveAudioCapturedFrame)
     {
         lock.lock()
         defer { lock.unlock() }
         guard generation == requestGeneration else { return }
+        let snapshot = frame.snapshot
         latestSnapshot = snapshot
+        waveformRows.append(frame.waveformRow)
+        if waveformRows.count > AudioWaveformRow.maximumHistoryRows
+        {
+            waveformRows.removeFirst()
+        }
         hasPendingOnset = hasPendingOnset || snapshot.onset
         revision += 1
     }
@@ -185,6 +195,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         isRunning = false
         sampleRate = 0
         latestSnapshot = nil
+        waveformRows.removeAll(keepingCapacity: true)
         hasPendingOnset = false
         revision += 1
     }

@@ -66,6 +66,7 @@ public final class AudioFileAnalysisNode: Node
     public var outputFrameRate: NodePort<Float> { port(named: "outputFrameRate") }
     public var outputDuration: NodePort<Float> { port(named: "outputDuration") }
     public var outputAverageBPM: NodePort<Float> { port(named: "outputAverageBPM") }
+    public var outputWaveformHistory: NodePort<ContiguousArray<Float>> { port(named: "outputWaveformHistory") }
 
     public required init(context: Context)
     {
@@ -156,6 +157,7 @@ public final class AudioFileAnalysisNode: Node
                 outputFrameRate.send(0)
                 outputDuration.send(0)
                 outputAverageBPM.send(0)
+                outputWaveformHistory.send(AudioWaveformRow.flattenedHistory([]))
                 lastPublishedState = unavailable
             }
             if let errorDescription = state.errorDescription
@@ -195,6 +197,9 @@ public final class AudioFileAnalysisNode: Node
         outputFrameRate.send(analysis.framesPerSecond)
         outputDuration.send(analysis.durationSeconds)
         outputAverageBPM.send(analysis.averageBPM)
+        outputWaveformHistory.send(
+            analysis.waveformHistory(endingAt: snapshot.frameIndex)
+        )
         lastPublishedState = selected
     }
 }

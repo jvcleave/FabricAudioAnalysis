@@ -55,6 +55,7 @@ public final class LiveAudioAnalysisNode: Node
     public var inputEnabled: ParameterPort<Bool> { port(named: "inputEnabled") }
     public var outputRunning: NodePort<Bool> { port(named: "outputRunning") }
     public var outputSampleRate: NodePort<Float> { port(named: "outputSampleRate") }
+    public var outputWaveformHistory: NodePort<ContiguousArray<Float>> { port(named: "outputWaveformHistory") }
 
     public required init(context: Context)
     {
@@ -144,6 +145,9 @@ public final class LiveAudioAnalysisNode: Node
             AudioAnalysisPortLayout.publish(state.snapshot, from: self)
             outputRunning.send(state.isRunning)
             outputSampleRate.send(state.sampleRate)
+            outputWaveformHistory.send(
+                AudioWaveformRow.flattenedHistory(state.waveformRows[...])
+            )
             lastPublishedState = publication
         }
         if let errorDescription = state.errorDescription

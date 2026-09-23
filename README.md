@@ -11,11 +11,12 @@ analyzer, and a streaming onset detector. The analyzer emits raw RMS,
 loudness, five frequency-band energies, spectral flux, and spectral centroid.
 
 The `.fabricplugin` development bundle registers **Audio File Analysis**,
-**Live Audio Analysis**, and **Audio 3D Waveform** with stable, typed ports. The
-file node decodes a selected audio file in bounded chunks and publishes
-compact, source-normalized measurements at graph time. The live node captures
-the system default microphone, analyzes samples outside Fabric's render call, and publishes the
-newest completed frame. Its fixed-size sample ring drops old samples if
+**Live Audio Analysis**, **Audio 3D Waveform**, and **Audio Waveform Geometry**
+with stable, typed ports. The file node decodes a selected audio file in
+bounded chunks and publishes compact, source-normalized measurements at graph
+time. The live node captures the system default microphone, analyzes samples
+outside Fabric's render call, and publishes the newest completed frame. Its
+fixed-size sample ring drops old samples if
 analysis falls behind instead of building an unbounded queue.
 Both sources also publish 24 signed waveform rows with 192 samples each. File
 rows are quantized to one byte per sample during analysis, and live capture
@@ -38,8 +39,8 @@ version uses the system default microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric
 Editor does so already.
 
-Four example graphs are in [FabricScenes](FabricScenes/README.md). The box examples use the
-source node's Medium Envelope to scale a rendered box uniformly. Choose a file
+Six example graphs are in [FabricScenes](FabricScenes/README.md). The box
+examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
 machine-specific bookmark.
 The waveform examples connect a source's Waveform History to Audio 3D Waveform,
@@ -53,6 +54,13 @@ The waveform image redraws when its history or controls change. The default
 source analysis rate is 30 FPS; increase it in the source settings for more
 frequent waveform updates, or lower the image Width and Height to reduce GPU
 work.
+The geometry examples connect Waveform History to Audio Waveform Geometry,
+then connect Geometry and a Color Material to a Mesh. This produces actual
+three-dimensional ribbon vertices, so Mesh transforms and the scene camera
+control the view. It avoids the offscreen waveform image and Image Mesh pass.
+The geometry uses a stable Satin object, rebuilding its dynamic vertex data
+only when waveform history or shape controls change. Its UV coordinates carry
+sample position and row age for custom materials.
 
 ## Node port reference
 
@@ -80,7 +88,7 @@ sources do not imply equal absolute sound levels.
 | Fast Envelope | Output | Float | 0 before data | Normalized RMS envelope with fast release |
 | Medium Envelope | Output | Float | 0 before data | Normalized RMS envelope with medium release |
 | Slow Envelope | Output | Float | 0 before data | Normalized RMS envelope with slow release |
-| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for Audio 3D Waveform |
+| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for either waveform node |
 
 ### Audio File Analysis
 
@@ -114,7 +122,18 @@ sources do not imply equal absolute sound levels.
 | Amplitude / Line Thickness / Spacing | Input | Float | 0.6 / 1.5 / 1.1 | Waveform displacement, pixel radius, and depth spacing |
 | Angle X / Angle Y / Scale / Fade | Input | Float | 0.43 / -0.23 / 1.98 / 0 | Perspective and depth styling |
 | Color / Transparent Background | Input | Vector 4 / Bool | Green / false | Line color and background alpha |
-| Image | Output | Fabric Image | Rendered each graph pass | Perspective waveform texture |
+| Image | Output | Fabric Image | Redrawn when input changes | Perspective waveform texture |
+
+### Audio Waveform Geometry
+
+| Port | Direction | Fabric type | Default or requirement | Description |
+| --- | --- | --- | --- | --- |
+| Waveform History | Input | Array of Float | 24 × 192 signed samples | Connect either audio source's Waveform History |
+| History | Input | Int | 24 | Number of newest rows to build |
+| Width / Depth | Input | Float | 2 / 1.2 | Mesh dimensions in world units |
+| Amplitude / Thickness | Input | Float | 0.6 / 0.01 | Vertical displacement and ribbon width in world units |
+| Primitive | Input | String | Triangle | Standard geometry primitive; keep Triangle for filled ribbons |
+| Geometry | Output | Satin Geometry | Dynamic ribbon mesh | Connect to a Mesh node's Geometry inlet |
 
 Run the focused core checks with:
 
@@ -150,6 +169,12 @@ Regenerate and GPU-check the waveform examples with:
 
 ```sh
 sh PluginVerification/verify.sh --write-waveform-samples
+```
+
+Generate and verify the geometry examples with:
+
+```sh
+sh PluginVerification/verify.sh --write-geometry-samples
 ```
 
 `PluginVerification/Package.resolved` matches the selected Fabric checkout's

@@ -15,6 +15,11 @@ public final class FabricAudioSourceProcessorPlugin: NSObject, FabricPlugin
 
     public static func additionalNodeClasses() -> [Node.Type]
     {
-        [AudioFileAnalysisNode.self, LiveAudioAnalysisNode.self, Audio3DWaveformNode.self]
+        [
+            AudioFileAnalysisNode.self,
+            LiveAudioAnalysisNode.self,
+            Audio3DWaveformNode.self,
+            AudioWaveformGeometryNode.self,
+        ]
     }
 }

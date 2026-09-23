@@ -93,3 +93,12 @@ Initial acceptance covers typed graph connections, save/reopen, a completed GPU
 pass with visible pixels, bounded waveform storage, and file and microphone
 sample graphs. Text, analog scan treatment, and bloom from MESS can be added
 as composable image effects later.
+
+## Geometry waveform extension
+
+**Audio Waveform Geometry** consumes the same fixed history and publishes a
+stable, dynamic Satin Geometry object. Each of the 24 rows is an independent
+triangle ribbon in XYZ space. Width, depth, amplitude, thickness, and visible
+row count are graph controls; a downstream Mesh and Material determine camera
+placement and appearance. This preserves the image node for existing graphs
+while allowing a direct 3D scene path without an offscreen image pass.

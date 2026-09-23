@@ -34,9 +34,10 @@ version uses the system default microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric
 Editor does so already.
 
-Two minimal graphs are in [FabricScenes](FabricScenes/README.md). Each connects
-the source node's RMS output to a number node. Choose a file after opening the
-file graph; the sample deliberately contains no machine-specific bookmark.
+Two example graphs are in [FabricScenes](FabricScenes/README.md). Each uses the
+source node's Medium Envelope to scale a rendered box uniformly. Choose a file
+after opening the file graph; the sample deliberately contains no
+machine-specific bookmark.
 
 ## Node port reference
 

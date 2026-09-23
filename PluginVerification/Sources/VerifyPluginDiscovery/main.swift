@@ -2,14 +2,17 @@ import Fabric
 import Foundation
 import Metal
 import Satin
+import simd
 
 private enum VerificationError: Error
 {
     case missingPlugin(String)
     case missingNode(String)
     case noMetalDevice
+    case noCommandBuffer
     case connectionFailed
     case graphRoundTripFailed
+    case boxScaleFailed
 }
 
 let pluginID = "com.jvclabs.FabricAudioSourceProcessor"
@@ -101,13 +104,45 @@ if CommandLine.arguments.contains("--write-samples")
     {
         let sampleGraph = Graph(context: context)
         let sourceNode = nodeClass.init(context: context)
-        sourceNode.offset = CGSize(width: -250, height: 0)
-        let mathNode = NumberBinaryOperator(context: context)
-        mathNode.offset = CGSize(width: 250, height: 0)
+        sourceNode.offset = CGSize(width: -800, height: 0)
+        let scaleOffsetNode = NumberBinaryOperator(context: context)
+        scaleOffsetNode.inputNumber2.value = 0.35
+        scaleOffsetNode.offset = CGSize(width: -500, height: 0)
+        let scaleVectorNode = ComposeVectorNode(context: context, vectorType: .float3)
+        scaleVectorNode.offset = CGSize(width: -200, height: 0)
+        let boxNode = BoxGeometryNode(context: context)
+        boxNode.offset = CGSize(width: -500, height: 450)
+        let materialNode = BasicColorMaterialNode(context: context)
+        materialNode.offset = CGSize(width: -200, height: 450)
+        let meshNode = MeshNode(context: context)
+        meshNode.offset = CGSize(width: 150, height: 150)
         sampleGraph.addNode(sourceNode)
-        sampleGraph.addNode(mathNode)
-        let rms: NodePort<Float> = sourceNode.port(named: "outputRMS")
-        guard sampleGraph.connect(rms, to: mathNode.inputNumber1) != nil else
+        sampleGraph.addNode(scaleOffsetNode)
+        sampleGraph.addNode(scaleVectorNode)
+        sampleGraph.addNode(boxNode)
+        sampleGraph.addNode(materialNode)
+        sampleGraph.addNode(meshNode)
+
+        let envelope: NodePort<Float> = sourceNode.port(named: "outputMediumEnvelope")
+        guard sampleGraph.connect(envelope, to: scaleOffsetNode.inputNumber1) != nil else
+        {
+            throw VerificationError.connectionFailed
+        }
+        for componentIndex in 0 ..< 3
+        {
+            let component: ParameterPort<Float> = scaleVectorNode.port(
+                named: "inputComponent\(componentIndex)"
+            )
+            guard sampleGraph.connect(scaleOffsetNode.outputNumber, to: component) != nil else
+            {
+                throw VerificationError.connectionFailed
+            }
+        }
+        let scaleVector: NodePort<simd_float3> = scaleVectorNode.port(named: "outputVector")
+        guard sampleGraph.connect(scaleVector, to: meshNode.inputScale) != nil,
+              sampleGraph.connect(boxNode.outputGeometry, to: meshNode.inputGeometry) != nil,
+              sampleGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil
+        else
         {
             throw VerificationError.connectionFailed
         }
@@ -123,11 +158,37 @@ if CommandLine.arguments.contains("--write-samples")
         let sampleDecoder = JSONDecoder()
         sampleDecoder.context = DecoderContext(documentContext: context)
         let reopenedSample = try sampleDecoder.decode(Graph.self, from: readableSample)
-        guard reopenedSample.nodes.count == 2,
-              reopenedSample.connections.count == 1
+        guard reopenedSample.nodes.count == 6,
+              reopenedSample.connections.count == 7,
+              reopenedSample.nodes.contains(where: { type(of: $0).name == "Mesh" }),
+              reopenedSample.nodes.contains(where: { type(of: $0).name == "Box Geometry" }),
+              reopenedSample.nodes.contains(where: { type(of: $0).name == nodeClass.name })
         else
         {
             throw VerificationError.graphRoundTripFailed
+        }
+        if fileName == "AudioFileAnalysis.fabric"
+        {
+            guard let commandBuffer = device.makeCommandQueue()?.makeCommandBuffer(),
+                  let reopenedMesh = reopenedSample.nodes.compactMap({ $0 as? MeshNode }).first
+            else
+            {
+                throw VerificationError.noCommandBuffer
+            }
+            let renderer = GraphRenderer(context: context, graph: reopenedSample)
+            try renderer.startExecution(graph: reopenedSample)
+            try renderer.execute(
+                graph: reopenedSample,
+                executionInfo: renderer.currentExecutionInfo,
+                renderPassDescriptor: MTLRenderPassDescriptor(),
+                commandBuffer: commandBuffer
+            )
+            guard reopenedMesh.object?.scale == simd_float3(repeating: 0.35) else
+            {
+                throw VerificationError.boxScaleFailed
+            }
+            try renderer.stopExecution(graph: reopenedSample)
+            print("Rendered box starts at 0.35 scale before audio is selected")
         }
         print("Wrote \(fileName)")
     }

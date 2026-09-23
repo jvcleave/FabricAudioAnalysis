@@ -81,3 +81,54 @@ else
     throw VerificationError.graphRoundTripFailed
 }
 print("Saved and reopened both nodes with a typed connection")
+
+if CommandLine.arguments.contains("--write-samples")
+{
+    // The shell script runs this executable from the plugin repository root.
+    let repositorySceneDirectory = URL(
+        fileURLWithPath: FileManager.default.currentDirectoryPath,
+        isDirectory: true
+    ).appending(path: "FabricScenes", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(
+        at: repositorySceneDirectory,
+        withIntermediateDirectories: true
+    )
+
+    for (nodeClass, fileName) in [
+        (fileNodeClass, "AudioFileAnalysis.fabric"),
+        (liveNodeClass, "LiveAudioAnalysis.fabric"),
+    ]
+    {
+        let sampleGraph = Graph(context: context)
+        let sourceNode = nodeClass.init(context: context)
+        sourceNode.offset = CGSize(width: -250, height: 0)
+        let mathNode = NumberBinaryOperator(context: context)
+        mathNode.offset = CGSize(width: 250, height: 0)
+        sampleGraph.addNode(sourceNode)
+        sampleGraph.addNode(mathNode)
+        let rms: NodePort<Float> = sourceNode.port(named: "outputRMS")
+        guard sampleGraph.connect(rms, to: mathNode.inputNumber1) != nil else
+        {
+            throw VerificationError.connectionFailed
+        }
+
+        let encodedSample = try JSONEncoder().encode(sampleGraph)
+        let object = try JSONSerialization.jsonObject(with: encodedSample)
+        let readableSample = try JSONSerialization.data(
+            withJSONObject: object,
+            options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        )
+        let sceneURL = repositorySceneDirectory.appending(path: fileName)
+        try readableSample.write(to: sceneURL)
+        let sampleDecoder = JSONDecoder()
+        sampleDecoder.context = DecoderContext(documentContext: context)
+        let reopenedSample = try sampleDecoder.decode(Graph.self, from: readableSample)
+        guard reopenedSample.nodes.count == 2,
+              reopenedSample.connections.count == 1
+        else
+        {
+            throw VerificationError.graphRoundTripFailed
+        }
+        print("Wrote \(fileName)")
+    }
+}

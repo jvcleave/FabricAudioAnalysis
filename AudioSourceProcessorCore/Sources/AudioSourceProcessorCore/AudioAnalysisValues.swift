@@ -99,4 +99,23 @@ public struct AudioAnalysisSnapshot: Codable, Equatable, Sendable
         self.mediumEnvelope = mediumEnvelope
         self.slowEnvelope = slowEnvelope
     }
+
+    public func replacingOnset(with onset: Bool) -> Self
+    {
+        Self(
+            frameIndex: frameIndex,
+            timeSeconds: timeSeconds,
+            measurements: measurements,
+            rmsNormalized: rmsNormalized,
+            loudnessNormalized: loudnessNormalized,
+            bandsNormalized: bandsNormalized,
+            spectralFluxNormalized: spectralFluxNormalized,
+            onset: onset,
+            peakHeldRMS: peakHeldRMS,
+            peakHeldFlux: peakHeldFlux,
+            fastEnvelope: fastEnvelope,
+            mediumEnvelope: mediumEnvelope,
+            slowEnvelope: slowEnvelope
+        )
+    }
 }

@@ -293,7 +293,9 @@ private enum AudioFileSnapshotBuilder
             return []
         }
 
-        let minimumGap = max(2, Int(ceil(0.06 * frameRate)))
+        // A short burst can create two FFT flux peaks as the analysis window
+        // crosses its leading edge. Treat peaks within 100 ms as one onset.
+        let minimumGap = max(3, Int(ceil(0.1 * frameRate)))
         var lastOnsetFrame = -minimumGap
         var onsetFrames: [Int] = []
         for frameIndex in 1 ..< descriptors.count - 1

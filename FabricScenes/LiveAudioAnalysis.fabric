@@ -1,0 +1,475 @@
+{
+  "connections" : [
+    {
+      "active" : true,
+      "id" : "276257FC-E5AA-4837-BC59-32FBCCD1310E",
+      "inletPortID" : "1588AFD9-4285-48A7-BD63-B61E471EE2F4",
+      "outletPortID" : "BB97C167-7E00-4091-8021-8898C28D0B91"
+    }
+  ],
+  "id" : "6933223F-660D-4166-8D22-57F332704299",
+  "nodeMap" : [
+    {
+      "type" : "com.jvclabs.FabricAudioSourceProcessor/LiveAudioAnalysisNode",
+      "value" : {
+        "id" : "D016E5F7-C5A4-4033-AB2F-3ED7080FA4F8",
+        "liveSettings" : {
+          "analysisFramesPerSecond" : 30
+        },
+        "nodeOffset" : [
+          -250,
+          0
+        ],
+        "ports" : [
+          {
+            "name" : "inputEnabled",
+            "payload" : {
+              "base" : {
+                "id" : "98238806-AA3F-4420-A811-2BE9D4153665",
+                "kind" : "Inlet",
+                "name" : "Enabled",
+                "parameter" : {
+                  "base" : {
+                    "controlType" : "toggle",
+                    "defaultValue" : true,
+                    "description" : "Capture while the graph executes",
+                    "id" : "98238806-AA3F-4420-A811-2BE9D4153665",
+                    "label" : "Enabled",
+                    "value" : true
+                  },
+                  "type" : "bool"
+                },
+                "portDescription" : "Capture while the graph executes",
+                "published" : false
+              },
+              "isParameterPort" : true,
+              "isProxyPort" : false,
+              "type" : "Bool"
+            }
+          },
+          {
+            "name" : "outputRMS",
+            "payload" : {
+              "base" : {
+                "id" : "BB97C167-7E00-4091-8021-8898C28D0B91",
+                "kind" : "Outlet",
+                "name" : "RMS",
+                "portDescription" : "Raw root-mean-square audio amplitude",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputRMSNormalized",
+            "payload" : {
+              "base" : {
+                "id" : "2A22483A-A05F-4ADA-995B-46D9535C166B",
+                "kind" : "Outlet",
+                "name" : "RMS Normalized",
+                "portDescription" : "RMS normalized to the rolling 180-frame maximum, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputLoudnessDB",
+            "payload" : {
+              "base" : {
+                "id" : "A39766EF-AE22-498A-9AAE-6B78E7ABF54A",
+                "kind" : "Outlet",
+                "name" : "Loudness dB",
+                "portDescription" : "Audio loudness in decibels",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputLoudnessNormalized",
+            "payload" : {
+              "base" : {
+                "id" : "D66DC1B6-2FC7-47AD-AE12-B24E3683DDDB",
+                "kind" : "Outlet",
+                "name" : "Loudness Normalized",
+                "portDescription" : "Loudness mapped from -60 to 0 dB into 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputOnset",
+            "payload" : {
+              "base" : {
+                "id" : "4420998A-D086-4433-BFE7-379D64EE3BC5",
+                "kind" : "Outlet",
+                "name" : "Onset",
+                "portDescription" : "Whether the published analysis frame has an onset",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Bool"
+            }
+          },
+          {
+            "name" : "outputSubBass",
+            "payload" : {
+              "base" : {
+                "id" : "71259B57-7EB7-4747-8174-B58D8B104815",
+                "kind" : "Outlet",
+                "name" : "Sub Bass",
+                "portDescription" : "Energy from 20 to 60 Hz, normalized to the rolling 180-frame maximum",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputBass",
+            "payload" : {
+              "base" : {
+                "id" : "FB4D0A84-C896-4079-8EED-9527F6BB3A76",
+                "kind" : "Outlet",
+                "name" : "Bass",
+                "portDescription" : "Energy from 60 to 250 Hz, normalized to the rolling 180-frame maximum",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputLowMid",
+            "payload" : {
+              "base" : {
+                "id" : "FFFBB500-9A34-4315-91D0-8CD773188477",
+                "kind" : "Outlet",
+                "name" : "Low Mid",
+                "portDescription" : "Energy from 250 to 500 Hz, normalized to the rolling 180-frame maximum",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputMid",
+            "payload" : {
+              "base" : {
+                "id" : "E1B112AB-D28D-49A3-9E8C-458C56A662E1",
+                "kind" : "Outlet",
+                "name" : "Mid",
+                "portDescription" : "Energy from 500 to 2000 Hz, normalized to the rolling 180-frame maximum",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputHigh",
+            "payload" : {
+              "base" : {
+                "id" : "266A2BF2-9A83-4154-905F-190BFC0E1BA9",
+                "kind" : "Outlet",
+                "name" : "High",
+                "portDescription" : "Energy from 2000 Hz to Nyquist or 20000 Hz, normalized to the rolling 180-frame maximum",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputSpectralFlux",
+            "payload" : {
+              "base" : {
+                "id" : "955258EF-4A41-401E-90F1-5D231C97B437",
+                "kind" : "Outlet",
+                "name" : "Spectral Flux",
+                "portDescription" : "Positive spectral change normalized to the rolling 180-frame maximum, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputSpectralCentroid",
+            "payload" : {
+              "base" : {
+                "id" : "29117B9E-053C-4098-B78A-BC1423DC4DDF",
+                "kind" : "Outlet",
+                "name" : "Spectral Centroid",
+                "portDescription" : "Spectral center of mass in hertz",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputPeakRMS",
+            "payload" : {
+              "base" : {
+                "id" : "C8BF90BA-4AAC-46B7-A823-B058604D1AF6",
+                "kind" : "Outlet",
+                "name" : "Peak RMS",
+                "portDescription" : "Peak-held normalized RMS, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputPeakFlux",
+            "payload" : {
+              "base" : {
+                "id" : "0363D9C1-74F1-4744-85BE-1A9DF8FFF994",
+                "kind" : "Outlet",
+                "name" : "Peak Flux",
+                "portDescription" : "Peak-held normalized spectral flux, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputFastEnvelope",
+            "payload" : {
+              "base" : {
+                "id" : "A0858D40-BA35-47D3-BBA8-64B03C2E283C",
+                "kind" : "Outlet",
+                "name" : "Fast Envelope",
+                "portDescription" : "Fast-release normalized RMS envelope, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputMediumEnvelope",
+            "payload" : {
+              "base" : {
+                "id" : "54C40121-4818-4877-BDF2-AA52D323A11C",
+                "kind" : "Outlet",
+                "name" : "Medium Envelope",
+                "portDescription" : "Medium-release normalized RMS envelope, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputSlowEnvelope",
+            "payload" : {
+              "base" : {
+                "id" : "7478606C-1DAE-4A82-B31F-5A3B89C22350",
+                "kind" : "Outlet",
+                "name" : "Slow Envelope",
+                "portDescription" : "Slow-release normalized RMS envelope, 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "outputRunning",
+            "payload" : {
+              "base" : {
+                "id" : "557632B4-6812-469A-A386-BF6A274FBD73",
+                "kind" : "Outlet",
+                "name" : "Running",
+                "portDescription" : "True while microphone capture is active",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Bool"
+            }
+          },
+          {
+            "name" : "outputSampleRate",
+            "payload" : {
+              "base" : {
+                "id" : "6F777BEB-5C3D-4888-9462-81CAE3CA350F",
+                "kind" : "Outlet",
+                "name" : "Sample Rate",
+                "portDescription" : "Microphone sample rate in hertz",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type" : "graphics.fabric.CoreNodes/NumberBinaryOperator",
+      "value" : {
+        "id" : "728FC462-74C0-424F-ADB3-73CE30A6529F",
+        "nodeOffset" : [
+          250,
+          0
+        ],
+        "ports" : [
+          {
+            "name" : "inputNumber1",
+            "payload" : {
+              "base" : {
+                "id" : "1588AFD9-4285-48A7-BD63-B61E471EE2F4",
+                "kind" : "Inlet",
+                "name" : "Number A",
+                "parameter" : {
+                  "base" : {
+                    "controlType" : "inputfield",
+                    "defaultValue" : 0,
+                    "description" : "First operand for the binary operation",
+                    "id" : "1588AFD9-4285-48A7-BD63-B61E471EE2F4",
+                    "label" : "Number A",
+                    "max" : 1,
+                    "min" : 0,
+                    "value" : 0
+                  },
+                  "type" : "float"
+                },
+                "portDescription" : "First operand for the binary operation",
+                "published" : false
+              },
+              "isParameterPort" : true,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "inputNumber2",
+            "payload" : {
+              "base" : {
+                "id" : "52230BE5-E99B-49F8-8A3F-71FBA0C732CC",
+                "kind" : "Inlet",
+                "name" : "Number B",
+                "parameter" : {
+                  "base" : {
+                    "controlType" : "inputfield",
+                    "defaultValue" : 0,
+                    "description" : "Second operand for the binary operation",
+                    "id" : "52230BE5-E99B-49F8-8A3F-71FBA0C732CC",
+                    "label" : "Number B",
+                    "max" : 1,
+                    "min" : 0,
+                    "value" : 0
+                  },
+                  "type" : "float"
+                },
+                "portDescription" : "Second operand for the binary operation",
+                "published" : false
+              },
+              "isParameterPort" : true,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          },
+          {
+            "name" : "inputParam",
+            "payload" : {
+              "base" : {
+                "id" : "B7993F75-8A61-4757-AF89-8FEA9D673BC0",
+                "kind" : "Inlet",
+                "name" : "Operator",
+                "parameter" : {
+                  "base" : {
+                    "controlType" : "dropdown",
+                    "defaultValue" : "Add",
+                    "description" : "Mathematical operation to perform",
+                    "id" : "B7993F75-8A61-4757-AF89-8FEA9D673BC0",
+                    "label" : "Operator",
+                    "options" : [
+                      "Add",
+                      "Subtract",
+                      "Multiply",
+                      "Divide",
+                      "Power",
+                      "Minimum",
+                      "Maximum",
+                      "Modulo"
+                    ],
+                    "value" : "Add"
+                  },
+                  "type" : "string"
+                },
+                "portDescription" : "Mathematical operation to perform",
+                "published" : false
+              },
+              "isParameterPort" : true,
+              "isProxyPort" : false,
+              "type" : "String"
+            }
+          },
+          {
+            "name" : "outputNumber",
+            "payload" : {
+              "base" : {
+                "id" : "D75357C1-F68E-4ADE-8348-DEA99FA5E99C",
+                "kind" : "Outlet",
+                "name" : "Number",
+                "portDescription" : "Result of the binary operation",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "notes" : [
+
+  ],
+  "requiredPlugins" : [
+    {
+      "id" : "com.jvclabs.FabricAudioSourceProcessor",
+      "version" : "1.0"
+    },
+    {
+      "id" : "graphics.fabric.CoreNodes"
+    }
+  ],
+  "version" : {
+    "alpha1" : {
+
+    }
+  }
+}

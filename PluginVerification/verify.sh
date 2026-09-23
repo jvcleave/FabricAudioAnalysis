@@ -29,4 +29,5 @@ if [ -d "$sparkle_source" ] && [ ! -d "$sparkle_destination" ]; then
     codesign --force --deep --sign - "$sparkle_destination"
 fi
 
-"$build_products/VerifyPluginDiscovery"
+cd "$repository_root"
+"$build_products/VerifyPluginDiscovery" "$@"

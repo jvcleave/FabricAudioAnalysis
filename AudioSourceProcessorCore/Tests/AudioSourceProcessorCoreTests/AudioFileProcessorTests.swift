@@ -8,7 +8,12 @@ final class AudioFileProcessorTests: XCTestCase
     {
         let audioURL = URL.temporaryDirectory.appending(path: "fabric-audio-\(UUID().uuidString).wav")
         defer { try? FileManager.default.removeItem(at: audioURL) }
-        try writeTestWave(to: audioURL)
+        try writeTestWave(to: audioURL, seconds: 1)
+        { sampleIndex in
+            sampleIndex < 12_000
+                ? 0
+                : sin(2 * .pi * 1_000 * Double(sampleIndex) / 48_000)
+        }
 
         let analysis = try await AudioFileProcessor().process(
             url: audioURL,
@@ -34,11 +39,37 @@ final class AudioFileProcessorTests: XCTestCase
         XCTAssertEqual(analysis.frame(at: 1.1, loop: true)?.frameIndex, 3)
     }
 
-    /// A one-second PCM16 WAV crosses several 8192-sample decoding chunks.
-    private func writeTestWave(to url: URL) throws
+    func testRepeatedTransientsProduceTempoEstimate() async throws
+    {
+        let audioURL = URL.temporaryDirectory.appending(path: "fabric-beats-\(UUID().uuidString).wav")
+        defer { try? FileManager.default.removeItem(at: audioURL) }
+        try writeTestWave(to: audioURL, seconds: 3)
+        { sampleIndex in
+            let isBeat = sampleIndex >= 24_000
+                && sampleIndex < 144_000
+                && sampleIndex % 24_000 < 2_400
+            return isBeat
+                ? sin(2 * .pi * 1_000 * Double(sampleIndex) / 48_000)
+                : 0
+        }
+
+        let analysis = try await AudioFileProcessor().process(
+            url: audioURL,
+            framesPerSecond: 30
+        )
+        XCTAssertGreaterThanOrEqual(analysis.frames.filter(\.onset).count, 3)
+        XCTAssertEqual(analysis.averageBPM, 120, accuracy: 15)
+    }
+
+    /// PCM16 WAV fixtures cross multiple 8192-sample decoding chunks.
+    private func writeTestWave(
+        to url: URL,
+        seconds: Int,
+        sample: (Int) -> Double
+    ) throws
     {
         let sampleRate: UInt32 = 48_000
-        let sampleCount = Int(sampleRate)
+        let sampleCount = Int(sampleRate) * seconds
         let audioByteCount = UInt32(sampleCount * MemoryLayout<Int16>.size)
         var wave = Data()
 
@@ -57,9 +88,7 @@ final class AudioFileProcessorTests: XCTestCase
 
         for sampleIndex in 0 ..< sampleCount
         {
-            let amplitude: Double = sampleIndex < sampleCount / 4
-                ? 0
-                : sin(2 * .pi * 1_000 * Double(sampleIndex) / Double(sampleRate))
+            let amplitude = sample(sampleIndex)
             let sample = Int16(amplitude * 32_767)
             appendLittleEndian(sample, to: &wave)
         }

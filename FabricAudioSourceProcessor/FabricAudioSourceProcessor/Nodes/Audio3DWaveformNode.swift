@@ -26,7 +26,7 @@ public final class Audio3DWaveformNode: Node
 {
     public override class var name: String { "Audio 3D Waveform" }
     public override class var nodeType: Node.NodeType { .Image(imageType: .Generator) }
-    public override class var nodeExecutionMode: Node.ExecutionMode { .Provider }
+    public override class var nodeExecutionMode: Node.ExecutionMode { .Processor }
     public override class var nodeTimeMode: Node.TimeMode { .Idle }
     public override class var nodeDescription: String
     {

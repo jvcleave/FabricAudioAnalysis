@@ -303,7 +303,7 @@ if CommandLine.arguments.contains("--write-waveform-samples")
                 throw VerificationError.noCommandBuffer
             }
             let renderer = GraphRenderer(context: context, graph: reopened)
-            try renderer.startExecution(graph: reopened)
+            try renderer.startExecution(graph: reopened, trace: true)
             try renderer.execute(
                 graph: reopened,
                 executionInfo: renderer.currentExecutionInfo,
@@ -360,8 +360,52 @@ if CommandLine.arguments.contains("--write-waveform-samples")
             {
                 throw VerificationError.waveformRenderFailed("The rendered image contained no visible lines")
             }
+            guard let unchangedCommandBuffer = device.makeCommandQueue()?.makeCommandBuffer()
+            else
+            {
+                throw VerificationError.noCommandBuffer
+            }
+            try renderer.execute(
+                graph: reopened,
+                executionInfo: renderer.currentExecutionInfo,
+                renderPassDescriptor: MTLRenderPassDescriptor(),
+                commandBuffer: unchangedCommandBuffer
+            )
+            let unchangedExecution = renderer.executionTrace?.executions.last?
+                .nodeExecutions.first(where: { $0.nodeID == reopenedVisualizer.id })
+            guard unchangedExecution?.result == .skippedClean else
+            {
+                throw VerificationError.waveformRenderFailed(
+                    "The visualizer redrew unchanged waveform history"
+                )
+            }
+            unchangedCommandBuffer.commit()
+
+            let amplitude: ParameterPort<Float> = reopenedVisualizer.port(named: "inputAmplitude")
+            amplitude.value = 0.7
+            guard let changedCommandBuffer = device.makeCommandQueue()?.makeCommandBuffer()
+            else
+            {
+                throw VerificationError.noCommandBuffer
+            }
+            try renderer.execute(
+                graph: reopened,
+                executionInfo: renderer.currentExecutionInfo,
+                renderPassDescriptor: MTLRenderPassDescriptor(),
+                commandBuffer: changedCommandBuffer
+            )
+            let changedExecution = renderer.executionTrace?.executions.last?
+                .nodeExecutions.first(where: { $0.nodeID == reopenedVisualizer.id })
+            guard changedExecution?.result == .executed else
+            {
+                throw VerificationError.waveformRenderFailed(
+                    "The visualizer did not redraw after a control change"
+                )
+            }
+            changedCommandBuffer.commit()
+            changedCommandBuffer.waitUntilCompleted()
             try renderer.stopExecution(graph: reopened)
-            print("Rendered Audio 3D Waveform with \(litPixelCount) visible pixels")
+            print("Rendered Audio 3D Waveform with \(litPixelCount) visible pixels; skipped unchanged input and redrew after a control change")
         }
         print("Wrote \(fileName)")
     }

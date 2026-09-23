@@ -49,6 +49,10 @@ Fabric's command buffer. It draws perspective waveform layers, with controls
 for image size, row count, amplitude, thickness, spacing, rotation, scale,
 fade, color, and background alpha. MESS's text, scan, and bloom overlays are
 outside this first version.
+The waveform image redraws when its history or controls change. The default
+source analysis rate is 30 FPS; increase it in the source settings for more
+frequent waveform updates, or lower the image Width and Height to reduce GPU
+work.
 
 ## Node port reference
 

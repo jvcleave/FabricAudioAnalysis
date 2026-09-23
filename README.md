@@ -11,9 +11,18 @@ analyzer, and a streaming onset detector. The analyzer emits raw RMS,
 loudness, five frequency-band energies, spectral flux, and spectral centroid.
 
 The `.fabricplugin` development bundle registers **Audio File Analysis** and
-**Live Audio Analysis** with stable, typed ports. These are registration
-shells: `Ready` and `Running` report `false`; file decoding, microphone
-capture, normalization, and measurement publication are upcoming milestones.
+**Live Audio Analysis** with stable, typed ports. The file node decodes a
+selected audio file in bounded chunks and publishes compact, source-normalized
+measurements at graph time. The live node remains a registration shell:
+`Running` reports `false` until microphone capture is implemented.
+
+For the file node, choose an audio file in its settings and set the analysis
+FPS (default 30). `Ready` stays false while analysis runs. Once ready, a
+connected `Time` input selects the frame in seconds; otherwise graph time is
+multiplied by `Playback Rate`. `Loop` wraps time at the file duration. The node
+analyzes audio without playing it. Saved graphs carry a security-scoped file
+bookmark; reselect the file if the bookmark is stale or the graph moves to a
+different machine.
 
 Run the focused core checks with:
 
@@ -38,7 +47,8 @@ The target builds the adjacent `../Fabric` checkout in an isolated
 pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The first
 verified bundle build used Fabric `69b8a580a1ef79f5c8a9b150b5d3483193c541ac`.
 
-After building, check registration through Fabric's own `NodeRegistry`:
+After building, check registration and graph save/reopen through Fabric's own
+`NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh

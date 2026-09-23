@@ -5,6 +5,7 @@ public enum AudioFrameAnalyzerError: LocalizedError
 {
     case invalidSampleRate
     case emptySamples
+    case invalidRMSWindow
     case fftSetupUnavailable
 
     public var errorDescription: String?
@@ -15,6 +16,8 @@ public enum AudioFrameAnalyzerError: LocalizedError
                 return "Audio sample rate must be finite and greater than zero."
             case .emptySamples:
                 return "An audio analysis frame must contain samples."
+            case .invalidRMSWindow:
+                return "The RMS window must contain samples from the analysis frame."
             case .fftSetupUnavailable:
                 return "The audio FFT analyzer could not be created."
         }
@@ -76,9 +79,13 @@ public final class AudioFrameAnalyzer
         }
     }
 
-    /// Analyze one mono frame. RMS uses the complete supplied hop; spectral
+    /// Analyze one mono frame. RMS uses the requested leading hop; spectral
     /// measurements use the first 2048 samples, zero-padded when necessary.
-    public func analyze(samples: [Float], sampleRate: Float) throws -> AudioFrameMeasurements
+    public func analyze(
+        samples: [Float],
+        sampleRate: Float,
+        rmsSampleCount: Int? = nil
+    ) throws -> AudioFrameMeasurements
     {
         guard sampleRate.isFinite, sampleRate > 0 else
         {
@@ -88,22 +95,28 @@ public final class AudioFrameAnalyzer
         {
             throw AudioFrameAnalyzerError.emptySamples
         }
+        let levelSampleCount = rmsSampleCount ?? samples.count
+        guard levelSampleCount > 0, levelSampleCount <= samples.count else
+        {
+            throw AudioFrameAnalyzerError.invalidRMSWindow
+        }
 
         var squaredSampleSum: Double = 0
-        for sampleIndex in samples.indices
+        for sampleIndex in 0 ..< levelSampleCount
         {
             let safeSample = samples[sampleIndex].isFinite ? samples[sampleIndex] : 0
             squaredSampleSum += Double(safeSample) * Double(safeSample)
-            if sampleIndex < Self.fftSize
-            {
-                fftSamples[sampleIndex] = safeSample * window[sampleIndex]
-            }
+        }
+        for sampleIndex in 0 ..< min(samples.count, Self.fftSize)
+        {
+            let safeSample = samples[sampleIndex].isFinite ? samples[sampleIndex] : 0
+            fftSamples[sampleIndex] = safeSample * window[sampleIndex]
         }
         for sampleIndex in min(samples.count, Self.fftSize) ..< Self.fftSize
         {
             fftSamples[sampleIndex] = 0
         }
-        let rms = Float(sqrt(squaredSampleSum / Double(samples.count)))
+        let rms = Float(sqrt(squaredSampleSum / Double(levelSampleCount)))
         let loudnessDB = rms > 1e-7 ? 20 * log10f(rms) : -140
 
         let halfSize = Self.fftSize / 2

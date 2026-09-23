@@ -2,5 +2,6 @@
 .build/
 AudioSourceProcessorCore/.build/
 DerivedData/
+.fabric-spm/
 *.xcuserstate
 xcuserdata/

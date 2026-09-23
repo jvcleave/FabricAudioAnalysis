@@ -5,18 +5,52 @@ The planned node behavior, ports, and milestones are in [PLUG_IN_PLAN.md](PLUG_I
 
 ## Current state
 
-The first implementation slice is `AudioSourceProcessorCore`, a Swift 5.9,
-macOS 15+ package with no Fabric dependency. It defines immutable analysis
-values, a 2048-point FFT frame analyzer, and a streaming onset detector.
-The analyzer emits raw RMS, loudness, five frequency-band energies, spectral
-flux, and spectral centroid. The file processor, microphone capture adapter,
-normalization, and `.fabricplugin` bundle are still planned work.
+`AudioSourceProcessorCore` is a Swift 5.9, macOS 15+ package with no Fabric
+dependency. It defines immutable analysis values, a 2048-point FFT frame
+analyzer, and a streaming onset detector. The analyzer emits raw RMS,
+loudness, five frequency-band energies, spectral flux, and spectral centroid.
+
+The `.fabricplugin` development bundle registers **Audio File Analysis** and
+**Live Audio Analysis** with stable, typed ports. These are registration
+shells: `Ready` and `Running` report `false`; file decoding, microphone
+capture, normalization, and measurement publication are upcoming milestones.
 
 Run the focused core checks with:
 
 ```sh
 swift test --package-path AudioSourceProcessorCore
 ```
+
+Build and install the development bundle from this repository root:
+
+```sh
+xcodebuild \
+  -project FabricAudioSourceProcessor/FabricAudioSourceProcessor.xcodeproj \
+  -scheme FabricAudioSourceProcessor \
+  -configuration Debug \
+  -destination 'platform=macOS' \
+  build
+```
+
+The target builds the adjacent `../Fabric` checkout in an isolated
+`.fabric-spm` directory and installs an ad-hoc signed copy in
+`~/Library/Application Support/Fabric/Plugins/`. To use a different checkout,
+pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The first
+verified bundle build used Fabric `69b8a580a1ef79f5c8a9b150b5d3483193c541ac`.
+
+After building, check registration through Fabric's own `NodeRegistry`:
+
+```sh
+sh PluginVerification/verify.sh
+```
+
+`PluginVerification/Package.resolved` matches the selected Fabric checkout's
+package lock. Refresh it from that checkout when updating the host revision.
+The verification script prepares a local Sparkle copy needed by Fabric's
+command-line host executable; it does not change the Fabric checkout.
+
+Restart Fabric Editor after updating the installed bundle; its registry loads
+external plug-ins at startup.
 
 The analyzer and onset threshold are adapted from
 [AudioSourceProcessorExample](https://github.com/jvcleave/AudioSourceProcessorExample)

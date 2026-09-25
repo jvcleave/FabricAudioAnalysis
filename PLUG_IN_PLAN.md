@@ -80,29 +80,6 @@ The two sources have different normalization windows: file RMS, bands, and flux 
 - Core tests, plug-in builds, discovery, graph save/reopen, and the included example graphs pass on the targeted Fabric checkout.
 - The README states the exact Fabric revision or release used for the verified build and how to install and use the plug-in.
 
-## Waveform visualizer extension
-
-MESS's `Audio3DWaveformVisualizerFilter` draws a stack of signed audio rows in
-a perspective Metal pass. In Fabric, a separate **Audio 3D Waveform** image
-node accepts a fixed 24-by-192 Float history from either audio source. The
-file processor stores quantized rows alongside its compact measurements;
-the live store keeps only 24 recent rows. The image node uses Fabric's command
-buffer and a bundled shader, so it does not start a second microphone capture.
-
-Initial acceptance covers typed graph connections, save/reopen, a completed GPU
-pass with visible pixels, bounded waveform storage, and file and microphone
-sample graphs. Text, analog scan treatment, and bloom from MESS can be added
-as composable image effects later.
-
-## Geometry waveform extension
-
-**Audio Waveform Geometry** consumes the same fixed history and publishes a
-stable, dynamic Satin Geometry object. Each of the 24 rows is an independent
-triangle ribbon in XYZ space. Width, depth, amplitude, thickness, and visible
-row count are graph controls; a downstream Mesh and Material determine camera
-placement and appearance. This preserves the image node for existing graphs
-while allowing a direct 3D scene path without an offscreen image pass.
-
 ## Audio file playback extension
 
 **Audio File Playback** is an audio-output Consumer with an `AVPlayer` owned

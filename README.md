@@ -11,7 +11,7 @@ analyzer, and a streaming onset detector. The analyzer emits raw RMS,
 loudness, five frequency-band energies, spectral flux, and spectral centroid.
 
 The `.fabricplugin` development bundle registers **Audio File Analysis**,
-**Audio File Playback**, **Live Audio Analysis**, **Audio 3D Waveform**, and **Audio Waveform Geometry**
+**Audio File Playback**, and **Live Audio Analysis**
 with stable, typed ports. The file node decodes a selected audio file in
 bounded chunks and publishes compact, source-normalized measurements at graph
 time. The live node captures the system default microphone, analyzes samples
@@ -20,7 +20,7 @@ fixed-size sample ring drops old samples if
 analysis falls behind instead of building an unbounded queue.
 Both sources also publish 24 signed waveform rows with 192 samples each. File
 rows are quantized to one byte per sample during analysis, and live capture
-keeps only its 24 newest rows. This gives the visualizer a bounded input
+keeps only its 24 newest rows. This gives downstream nodes a bounded input
 without retaining full PCM windows.
 
 For the file node, choose an audio file in its settings and set the analysis
@@ -48,31 +48,13 @@ Time and File URL to Audio File Analysis's matching inputs to share the
 audible clock and file selection. Playback continues
 when the analysis node is still preparing its file measurements.
 
-Seven example graphs are in [FabricScenes](FabricScenes/README.md). The box
+Three example graphs are in [FabricScenes](FabricScenes/README.md). The box
 examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
 machine-specific file path.
-The waveform examples connect a source's Waveform History to Audio 3D Waveform,
-then show its Image on an Image Mesh. The visualizer uses a bundled Metal
-shader adapted from MESS's `Audio3DWaveformVisualizerFilter` and encodes into
-Fabric's command buffer. It draws perspective waveform layers, with controls
-for image size, row count, amplitude, thickness, spacing, rotation, scale,
-fade, color, and background alpha. MESS's text, scan, and bloom overlays are
-outside this first version.
-The waveform image redraws when its history or controls change. The default
-source analysis rate is 30 FPS; increase it in the source settings for more
-frequent waveform updates, or lower the image Width and Height to reduce GPU
-work.
 The playback example connects the player's Current Time and File URL to Audio
 File Analysis and uses Medium Envelope to scale a box. Select the file once in
 Playback Settings; Analysis uses that selection.
-The geometry examples connect Waveform History to Audio Waveform Geometry,
-then connect Geometry and a Color Material to a Mesh. This produces actual
-three-dimensional ribbon vertices, so Mesh transforms and the scene camera
-control the view. It avoids the offscreen waveform image and Image Mesh pass.
-The geometry uses a stable Satin object, rebuilding its dynamic vertex data
-only when waveform history or shape controls change. Its UV coordinates carry
-sample position and row age for custom materials.
 
 ## Node port reference
 
@@ -100,7 +82,7 @@ sources do not imply equal absolute sound levels.
 | Fast Envelope | Output | Float | 0 before data | Normalized RMS envelope with fast release |
 | Medium Envelope | Output | Float | 0 before data | Normalized RMS envelope with medium release |
 | Slow Envelope | Output | Float | 0 before data | Normalized RMS envelope with slow release |
-| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for either waveform node |
+| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for downstream nodes |
 
 ### Audio File Analysis
 
@@ -138,29 +120,6 @@ sources do not imply equal absolute sound levels.
 | Finished | Output | Bool | false | One graph-pass pulse at the file end |
 | File URL | Output | String | Empty before selection | Selected local file URL for downstream analysis |
 
-### Audio 3D Waveform
-
-| Port | Direction | Fabric type | Default or requirement | Description |
-| --- | --- | --- | --- | --- |
-| Waveform History | Input | Array of Float | 24 × 192 signed samples | Connect either audio source's Waveform History |
-| Width / Height | Input | Int | 1280 / 720 | Output image size in pixels |
-| History | Input | Int | 24 | Number of newest rows to draw |
-| Amplitude / Line Thickness / Spacing | Input | Float | 0.6 / 1.5 / 1.1 | Waveform displacement, pixel radius, and depth spacing |
-| Angle X / Angle Y / Scale / Fade | Input | Float | 0.43 / -0.23 / 1.98 / 0 | Perspective and depth styling |
-| Color / Transparent Background | Input | Vector 4 / Bool | Green / false | Line color and background alpha |
-| Image | Output | Fabric Image | Redrawn when input changes | Perspective waveform texture |
-
-### Audio Waveform Geometry
-
-| Port | Direction | Fabric type | Default or requirement | Description |
-| --- | --- | --- | --- | --- |
-| Waveform History | Input | Array of Float | 24 × 192 signed samples | Connect either audio source's Waveform History |
-| History | Input | Int | 24 | Number of newest rows to build |
-| Width / Depth | Input | Float | 2 / 1.2 | Mesh dimensions in world units |
-| Amplitude / Thickness | Input | Float | 0.6 / 0.01 | Vertical displacement and ribbon width in world units |
-| Primitive | Input | String | Triangle | Standard geometry primitive; keep Triangle for filled ribbons |
-| Geometry | Output | Satin Geometry | Dynamic ribbon mesh | Connect to a Mesh node's Geometry inlet |
-
 Run the focused core checks with:
 
 ```sh
@@ -189,18 +148,6 @@ After building, check registration and graph save/reopen through Fabric's own
 
 ```sh
 sh PluginVerification/verify.sh
-```
-
-Regenerate and GPU-check the waveform examples with:
-
-```sh
-sh PluginVerification/verify.sh --write-waveform-samples
-```
-
-Generate and verify the geometry examples with:
-
-```sh
-sh PluginVerification/verify.sh --write-geometry-samples
 ```
 
 Generate the playback example and check play, pause, seek, and the clock

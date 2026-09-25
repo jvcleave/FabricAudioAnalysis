@@ -39,7 +39,7 @@ enum AudioAnalysisPortLayout
             ("outputFastEnvelope", NodePort<Float>(name: "Fast Envelope", kind: .Outlet, description: "Fast-release normalized RMS envelope, 0 to 1")),
             ("outputMediumEnvelope", NodePort<Float>(name: "Medium Envelope", kind: .Outlet, description: "Medium-release normalized RMS envelope, 0 to 1")),
             ("outputSlowEnvelope", NodePort<Float>(name: "Slow Envelope", kind: .Outlet, description: "Slow-release normalized RMS envelope, 0 to 1")),
-            ("outputWaveformHistory", NodePort<ContiguousArray<Float>>(name: "Waveform History", kind: .Outlet, description: "24 oldest-to-newest rows of 192 signed waveform samples for visualizers")),
+            ("outputWaveformHistory", NodePort<ContiguousArray<Float>>(name: "Waveform History", kind: .Outlet, description: "24 oldest-to-newest rows of 192 signed waveform samples")),
         ]
     }
 

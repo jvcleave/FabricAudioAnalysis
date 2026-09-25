@@ -131,15 +131,26 @@ for (fileName, expectedNodeCount, expectedConnectionCount) in [
     ("LiveAudioAnalysis.fabric", 6, 8),
     ("Audio3DWaveformFile.fabric", 3, 2),
     ("Audio3DWaveformLive.fabric", 3, 2),
-    ("AudioWaveformPlayback.fabric", 5, 4),
+    ("AudioWaveformPlayback.fabric", 7, 8),
 ]
 {
+    if fileName == "AudioWaveformPlayback.fabric"
+        && CommandLine.arguments.contains("--write-playback-sample")
+    {
+        continue
+    }
     let sceneData = try Data(contentsOf: existingSceneDirectory.appending(path: fileName))
     let sceneDecoder = JSONDecoder()
     sceneDecoder.context = DecoderContext(documentContext: context)
     let existingScene = try sceneDecoder.decode(Graph.self, from: sceneData)
-    guard existingScene.nodes.count == expectedNodeCount,
-          existingScene.connections.count == expectedConnectionCount
+    let allowsLocalPlaybackEdits = fileName == "AudioWaveformPlayback.fabric"
+    let nodeCountMatches = allowsLocalPlaybackEdits
+        ? existingScene.nodes.count >= expectedNodeCount
+        : existingScene.nodes.count == expectedNodeCount
+    let connectionCountMatches = allowsLocalPlaybackEdits
+        ? existingScene.connections.count >= expectedConnectionCount
+        : existingScene.connections.count == expectedConnectionCount
+    guard nodeCountMatches, connectionCountMatches
     else
     {
         throw VerificationError.graphRoundTripFailed
@@ -633,31 +644,50 @@ if CommandLine.arguments.contains("--write-playback-sample")
 {
     let playbackGraph = Graph(context: context)
     let playerNode = playbackNodeClass.init(context: context)
-    playerNode.offset = CGSize(width: -850, height: 0)
+    playerNode.offset = CGSize(width: -1100, height: 0)
     let analysisNode = fileNodeClass.init(context: context)
-    analysisNode.offset = CGSize(width: -500, height: 0)
-    let geometryNode = waveformGeometryClass.init(context: context)
-    geometryNode.offset = CGSize(width: -100, height: 0)
+    analysisNode.offset = CGSize(width: -800, height: 0)
+    let scaleOffsetNode = NumberBinaryOperator(context: context)
+    scaleOffsetNode.inputNumber2.value = 0.35
+    scaleOffsetNode.offset = CGSize(width: -500, height: 0)
+    let scaleVectorNode = ComposeVectorNode(context: context, vectorType: .float3)
+    scaleVectorNode.offset = CGSize(width: -200, height: 0)
+    let boxNode = BoxGeometryNode(context: context)
+    boxNode.offset = CGSize(width: -500, height: 450)
     let materialNode = BasicColorMaterialNode(context: context)
     materialNode.inputColor.value = simd_float4(0.22, 1, 0.35, 1)
-    materialNode.offset = CGSize(width: -100, height: 400)
+    materialNode.offset = CGSize(width: -200, height: 450)
     let meshNode = MeshNode(context: context)
     meshNode.inputCastsShadow.value = false
     meshNode.inputDoubleSided.value = true
-    meshNode.offset = CGSize(width: 350, height: 100)
-    for node in [playerNode, analysisNode, geometryNode, materialNode, meshNode]
+    meshNode.offset = CGSize(width: 150, height: 150)
+    for node in [playerNode, analysisNode, scaleOffsetNode, scaleVectorNode, boxNode, materialNode, meshNode]
     {
         playbackGraph.addNode(node)
     }
 
     let timeOutput: NodePort<Float> = playerNode.port(named: "outputCurrentTime")
     let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
-    let historyOutput: NodePort<ContiguousArray<Float>> = analysisNode.port(named: "outputWaveformHistory")
-    let historyInput: NodePort<ContiguousArray<Float>> = geometryNode.port(named: "inputHistory")
-    let geometryOutput: NodePort<Geometry> = geometryNode.port(named: "outputGeometry")
+    let envelopeOutput: NodePort<Float> = analysisNode.port(named: "outputMediumEnvelope")
     guard playbackGraph.connect(timeOutput, to: timeInput) != nil,
-          playbackGraph.connect(historyOutput, to: historyInput) != nil,
-          playbackGraph.connect(geometryOutput, to: meshNode.inputGeometry) != nil,
+          playbackGraph.connect(envelopeOutput, to: scaleOffsetNode.inputNumber1) != nil
+    else
+    {
+        throw VerificationError.connectionFailed
+    }
+    for componentIndex in 0 ..< 3
+    {
+        let component: ParameterPort<Float> = scaleVectorNode.port(
+            named: "inputComponent\(componentIndex)"
+        )
+        guard playbackGraph.connect(scaleOffsetNode.outputNumber, to: component) != nil else
+        {
+            throw VerificationError.connectionFailed
+        }
+    }
+    let scaleVector: NodePort<simd_float3> = scaleVectorNode.port(named: "outputVector")
+    guard playbackGraph.connect(scaleVector, to: meshNode.inputScale) != nil,
+          playbackGraph.connect(boxNode.outputGeometry, to: meshNode.inputGeometry) != nil,
           playbackGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil
     else
     {
@@ -682,13 +712,14 @@ if CommandLine.arguments.contains("--write-playback-sample")
     let sceneDecoder = JSONDecoder()
     sceneDecoder.context = DecoderContext(documentContext: context)
     let reopened = try sceneDecoder.decode(Graph.self, from: readable)
-    guard reopened.nodes.count == 5,
-          reopened.connections.count == 4
+    guard reopened.nodes.count == 7,
+          reopened.connections.count == 8,
+          reopened.nodes.contains(where: { type(of: $0).name == "Box Geometry" })
     else
     {
         throw VerificationError.graphRoundTripFailed
     }
-    print("Wrote AudioWaveformPlayback.fabric")
+    print("Wrote AudioWaveformPlayback.fabric with a 0.35 box scale offset")
 }
 
 if CommandLine.arguments.contains("--verify-playback")

@@ -17,8 +17,9 @@
 - `AudioWaveformGeometryLive.fabric` uses Live Audio Analysis for the same
   geometry path. Allow Fabric microphone access when macOS asks.
 - `AudioWaveformPlayback.fabric` plays an audio file and connects the player's
-  Current Time to Audio File Analysis, which drives Audio Waveform Geometry.
-  Select the same file in both nodes' Settings after opening the graph.
+  Current Time to Audio File Analysis. The analysis node's Medium Envelope
+  scales a box. Select the same file in both nodes' Settings after opening
+  the graph; choosing it only in Playback leaves the analysis output at zero.
 
 The box graphs add 0.35 to the source's Medium Envelope, then send that value to
 the box's X, Y, and Z scale components. The box remains visible during silence

@@ -63,6 +63,9 @@ The waveform image redraws when its history or controls change. The default
 source analysis rate is 30 FPS; increase it in the source settings for more
 frequent waveform updates, or lower the image Width and Height to reduce GPU
 work.
+The playback example connects the player's Current Time to Audio File Analysis
+and uses Medium Envelope to scale a box. Select the same file in both nodes'
+Settings so the analysis node produces movement while the player plays audio.
 The geometry examples connect Waveform History to Audio Waveform Geometry,
 then connect Geometry and a Color Material to a Mesh. This produces actual
 three-dimensional ribbon vertices, so Mesh transforms and the scene camera

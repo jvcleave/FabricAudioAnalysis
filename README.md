@@ -27,9 +27,9 @@ For the file node, choose an audio file in its settings and set the analysis
 FPS (default 30). `Ready` stays false while analysis runs. Once ready, a
 connected `Time` input selects the frame in seconds; otherwise graph time is
 multiplied by `Playback Rate`. `Loop` wraps time at the file duration. The node
-analyzes audio without playing it. Saved graphs carry a security-scoped file
-bookmark; reselect the file if the bookmark is stale or the graph moves to a
-different machine.
+analyzes audio without playing it. Saved graphs carry a local file URL. Reselect
+the file if its path changes or the graph moves to a different machine. Older
+graphs containing security-scoped bookmarks remain readable.
 
 For the live node, `Enabled` defaults to true. Capture starts while the graph
 runs, after macOS grants Fabric microphone access, and stops when the graph
@@ -41,17 +41,17 @@ Editor does so already.
 
 Audio File Playback uses `AVPlayer` to play a selected local audio file. It
 starts when the graph runs if Playing is enabled, pauses when Playing is off,
-and stops when graph execution ends. Select the file in node Settings for a
-saved security-scoped bookmark. The File URL inlet also accepts an absolute
-path or file URL for procedural graphs and overrides the Settings selection.
-Connect its Current Time output to Audio File Analysis's Time input to follow
-the audible clock, and select the same file in both nodes. Playback continues
+and stops when graph execution ends. Select the file in node Settings to save
+its local URL. The File URL inlet also accepts an absolute path or file URL
+for procedural graphs and overrides the Settings selection. Connect Current
+Time and File URL to Audio File Analysis's matching inputs to share the
+audible clock and file selection. Playback continues
 when the analysis node is still preparing its file measurements.
 
 Seven example graphs are in [FabricScenes](FabricScenes/README.md). The box
 examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
-machine-specific bookmark.
+machine-specific file path.
 The waveform examples connect a source's Waveform History to Audio 3D Waveform,
 then show its Image on an Image Mesh. The visualizer uses a bundled Metal
 shader adapted from MESS's `Audio3DWaveformVisualizerFilter` and encodes into
@@ -63,9 +63,9 @@ The waveform image redraws when its history or controls change. The default
 source analysis rate is 30 FPS; increase it in the source settings for more
 frequent waveform updates, or lower the image Width and Height to reduce GPU
 work.
-The playback example connects the player's Current Time to Audio File Analysis
-and uses Medium Envelope to scale a box. Select the same file in both nodes'
-Settings so the analysis node produces movement while the player plays audio.
+The playback example connects the player's Current Time and File URL to Audio
+File Analysis and uses Medium Envelope to scale a box. Select the file once in
+Playback Settings; Analysis uses that selection.
 The geometry examples connect Waveform History to Audio Waveform Geometry,
 then connect Geometry and a Color Material to a Mesh. This produces actual
 three-dimensional ribbon vertices, so Mesh transforms and the scene camera
@@ -109,6 +109,7 @@ sources do not imply equal absolute sound levels.
 | Time | Input | Float | Graph time when unconnected | Requested playback time in seconds |
 | Loop | Input | Bool | true | Wraps time at the source duration |
 | Playback Rate | Input | Float | 1 | Scales graph time only when Time is unconnected |
+| File URL | Input | String | Empty | Optional absolute path or file URL, overriding Settings |
 | Ready | Output | Bool | false | True after the selected file finishes analysis |
 | Current Frame | Output | Int | 0 before data | Zero-based selected analysis frame |
 | Frame Count | Output | Int | 0 before data | Number of analyzed frames |
@@ -135,6 +136,7 @@ sources do not imply equal absolute sound levels.
 | Current Time / Duration | Output | Float | 0 / 0 | Player time and file length in seconds |
 | Is Playing / Ready | Output | Bool | false / false | Player state |
 | Finished | Output | Bool | false | One graph-pass pulse at the file end |
+| File URL | Output | String | Empty before selection | Selected local file URL for downstream analysis |
 
 ### Audio 3D Waveform
 

@@ -3,26 +3,26 @@ import Foundation
 public struct AudioFilePlaybackSettings: Codable, Equatable, Sendable
 {
     public let bookmarkData: Data?
+    public let fileURLString: String?
     public let fileName: String?
 
     public init()
     {
         bookmarkData = nil
+        fileURLString = nil
         fileName = nil
     }
 
-    public init(fileURL: URL) throws
+    public init(fileURL: URL)
     {
-        bookmarkData = try fileURL.bookmarkData(
-            options: [.withSecurityScope],
-            includingResourceValuesForKeys: nil,
-            relativeTo: nil
-        )
+        bookmarkData = nil
+        fileURLString = fileURL.absoluteString
         fileName = fileURL.lastPathComponent
     }
 
     func resolvedFileURL() throws -> URL?
     {
+        if let fileURLString { return AudioFileSourceURL.resolve(fileURLString) }
         guard let bookmarkData else { return nil }
         var isStale = false
         let url = try URL(

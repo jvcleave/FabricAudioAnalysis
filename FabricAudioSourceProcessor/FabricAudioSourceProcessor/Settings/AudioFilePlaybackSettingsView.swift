@@ -21,17 +21,10 @@ final class AudioFilePlaybackSettingsModel
 
     func chooseFile(_ url: URL)
     {
-        do
-        {
-            let updatedSettings = try AudioFilePlaybackSettings(fileURL: url)
-            settings = updatedSettings
-            selectionError = nil
-            updateSettings(updatedSettings)
-        }
-        catch
-        {
-            selectionError = error.localizedDescription
-        }
+        let updatedSettings = AudioFilePlaybackSettings(fileURL: url)
+        settings = updatedSettings
+        selectionError = nil
+        updateSettings(updatedSettings)
     }
 }
 

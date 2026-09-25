@@ -45,6 +45,7 @@ public final class AudioFileAnalysisNode: Node
             ("inputTime", ParameterPort(parameter: FloatParameter("Time", 0, .inputfield, "Playback time in seconds; graph time is used when unconnected"))),
             ("inputLoop", ParameterPort(parameter: BoolParameter("Loop", true, .toggle, "Wrap file time at the end"))),
             ("inputPlaybackRate", ParameterPort(parameter: FloatParameter("Playback Rate", 1, .inputfield, "Graph-time speed when Time is unconnected"))),
+            ("inputFileURL", ParameterPort(parameter: StringParameter("File URL", "", .filepicker, "Optional local file URL or absolute path; overrides the file selected in Settings"))),
         ] +
         AudioAnalysisPortLayout.outputs(for: .file) +
         [
@@ -60,6 +61,7 @@ public final class AudioFileAnalysisNode: Node
     public var inputTime: ParameterPort<Float> { port(named: "inputTime") }
     public var inputLoop: ParameterPort<Bool> { port(named: "inputLoop") }
     public var inputPlaybackRate: ParameterPort<Float> { port(named: "inputPlaybackRate") }
+    public var inputFileURL: ParameterPort<String> { port(named: "inputFileURL") }
     public var outputReady: NodePort<Bool> { port(named: "outputReady") }
     public var outputCurrentFrame: NodePort<Int> { port(named: "outputCurrentFrame") }
     public var outputFrameCount: NodePort<Int> { port(named: "outputFrameCount") }
@@ -143,6 +145,7 @@ public final class AudioFileAnalysisNode: Node
         commandBuffer: MTLCommandBuffer
     ) throws
     {
+        analysisStore.replaceInputFileURL(inputFileURL.value)
         analysisStore.beginProcessingIfNeeded()
         let state = analysisStore.currentState()
         guard let analysis = state.analysis else

@@ -21,20 +21,13 @@ final class AudioFileAnalysisSettingsModel
 
     func chooseFile(_ url: URL)
     {
-        do
-        {
-            let updatedSettings = try AudioFileAnalysisSettings(
-                fileURL: url,
-                analysisFramesPerSecond: settings.analysisFramesPerSecond
-            )
-            settings = updatedSettings
-            selectionError = nil
-            updateSettings(updatedSettings)
-        }
-        catch
-        {
-            selectionError = error.localizedDescription
-        }
+        let updatedSettings = AudioFileAnalysisSettings(
+            fileURL: url,
+            analysisFramesPerSecond: settings.analysisFramesPerSecond
+        )
+        settings = updatedSettings
+        selectionError = nil
+        updateSettings(updatedSettings)
     }
 
     func changeFrameRate(_ framesPerSecond: Int)

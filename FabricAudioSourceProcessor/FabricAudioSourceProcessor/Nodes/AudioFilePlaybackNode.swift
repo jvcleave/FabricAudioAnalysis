@@ -27,8 +27,6 @@ public final class AudioFilePlaybackNode: Node
     private weak var settingsModel: AudioFilePlaybackSettingsModel?
     private var player: AVPlayer?
     private var playerItem: AVPlayerItem?
-    private var selectedFileURL: URL?
-    private var hasSecurityScope = false
     private var endObserver: NSObjectProtocol?
     private let endLock = NSLock()
     private var reachedEnd = false
@@ -53,6 +51,7 @@ public final class AudioFilePlaybackNode: Node
             ("outputPlaying", NodePort<Bool>(name: "Is Playing", kind: .Outlet, description: "True while the player is advancing")),
             ("outputReady", NodePort<Bool>(name: "Ready", kind: .Outlet, description: "True when the player item is ready")),
             ("outputFinished", NodePort<Bool>(name: "Finished", kind: .Outlet, description: "One graph-pass pulse when the player reaches the end")),
+            ("outputFileURL", NodePort<String>(name: "File URL", kind: .Outlet, description: "Selected local file URL; connect to Audio File Analysis File URL")),
         ]
     }
 
@@ -66,6 +65,7 @@ public final class AudioFilePlaybackNode: Node
     public var outputPlaying: NodePort<Bool> { port(named: "outputPlaying") }
     public var outputReady: NodePort<Bool> { port(named: "outputReady") }
     public var outputFinished: NodePort<Bool> { port(named: "outputFinished") }
+    public var outputFileURL: NodePort<String> { port(named: "outputFileURL") }
 
     public required init(context: Context)
     {
@@ -212,27 +212,15 @@ public final class AudioFilePlaybackNode: Node
     private func loadSelectedFile() throws
     {
         releasePlayer()
-        let fileURL: URL?
         let suppliedPath = (inputFileURL.value ?? "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if suppliedPath.isEmpty
-        {
-            fileURL = try fileSettings.resolvedFileURL()
-        }
-        else if suppliedPath.hasPrefix("file://")
-        {
-            fileURL = URL(string: suppliedPath)
-        }
-        else
-        {
-            fileURL = URL(fileURLWithPath: suppliedPath)
-        }
+        let fileURL = try suppliedPath.isEmpty
+            ? fileSettings.resolvedFileURL()
+            : AudioFileSourceURL.resolve(suppliedPath)
         guard let fileURL, fileURL.isFileURL else
         {
             throw AudioFilePlaybackError(message: "Choose a local audio file for playback.")
         }
-        hasSecurityScope = fileURL.startAccessingSecurityScopedResource()
-        selectedFileURL = fileURL
         guard FileManager.default.isReadableFile(atPath: fileURL.path) else
         {
             releasePlayer()
@@ -244,6 +232,7 @@ public final class AudioFilePlaybackNode: Node
         newPlayer.actionAtItemEnd = .pause
         playerItem = item
         player = newPlayer
+        outputFileURL.send(fileURL.absoluteString)
         endObserver = NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification,
             object: item,
@@ -296,6 +285,7 @@ public final class AudioFilePlaybackNode: Node
         outputPlaying.send(false)
         outputReady.send(false)
         outputFinished.send(false)
+        outputFileURL.send("")
     }
 
     private func releasePlayer()
@@ -309,12 +299,6 @@ public final class AudioFilePlaybackNode: Node
             NotificationCenter.default.removeObserver(endObserver)
             self.endObserver = nil
         }
-        if hasSecurityScope
-        {
-            selectedFileURL?.stopAccessingSecurityScopedResource()
-        }
-        selectedFileURL = nil
-        hasSecurityScope = false
         _ = takeEndSignal()
     }
 }

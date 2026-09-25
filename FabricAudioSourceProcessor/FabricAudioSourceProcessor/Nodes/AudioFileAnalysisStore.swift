@@ -13,6 +13,7 @@ final class AudioFileAnalysisStore: @unchecked Sendable
 
     private let lock = NSLock()
     private var settings: AudioFileAnalysisSettings
+    private var inputFileURLString: String?
     private var generation = 0
     private var analysis: AudioFileAnalysis?
     private var errorDescription: String?
@@ -33,12 +34,19 @@ final class AudioFileAnalysisStore: @unchecked Sendable
         lock.lock()
         defer { lock.unlock() }
         guard settings != newSettings else { return }
-        processingTask?.cancel()
-        processingTask = nil
-        generation += 1
         settings = newSettings
-        analysis = nil
-        errorDescription = nil
+        invalidateLocked()
+    }
+
+    func replaceInputFileURL(_ value: String?)
+    {
+        let normalizedValue = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue = normalizedValue?.isEmpty == false ? normalizedValue : nil
+        lock.lock()
+        defer { lock.unlock() }
+        guard inputFileURLString != newValue else { return }
+        inputFileURLString = newValue
+        invalidateLocked()
     }
 
     func cancelPendingWork()
@@ -46,9 +54,7 @@ final class AudioFileAnalysisStore: @unchecked Sendable
         lock.lock()
         defer { lock.unlock() }
         guard processingTask != nil, analysis == nil else { return }
-        processingTask?.cancel()
-        processingTask = nil
-        generation += 1
+        invalidateLocked()
     }
 
     func currentState() -> State
@@ -69,25 +75,29 @@ final class AudioFileAnalysisStore: @unchecked Sendable
         guard processingTask == nil,
               analysis == nil,
               errorDescription == nil,
-              settings.bookmarkData != nil
+              (inputFileURLString != nil || settings.fileURLString != nil || settings.bookmarkData != nil)
         else
         {
             return
         }
 
         let requestSettings = settings
+        let requestInputFileURLString = inputFileURLString
         let requestGeneration = generation
         processingTask = Task.detached(priority: .userInitiated) { [weak self] in
             do
             {
-                guard let fileURL = try requestSettings.resolvedFileURL() else { return }
-                let hasSecurityScope = fileURL.startAccessingSecurityScopedResource()
-                defer
+                let fileURL = if let requestInputFileURLString
                 {
-                    if hasSecurityScope
-                    {
-                        fileURL.stopAccessingSecurityScopedResource()
-                    }
+                    AudioFileSourceURL.resolve(requestInputFileURLString)
+                }
+                else
+                {
+                    try requestSettings.resolvedFileURL()
+                }
+                guard let fileURL else
+                {
+                    throw AudioFileAnalysisSettingsError.invalidFileURL
                 }
                 let result = try await AudioFileProcessor().process(
                     url: fileURL,
@@ -104,6 +114,15 @@ final class AudioFileAnalysisStore: @unchecked Sendable
                 self?.complete(requestGeneration, result: .failure(error))
             }
         }
+    }
+
+    private func invalidateLocked()
+    {
+        processingTask?.cancel()
+        processingTask = nil
+        generation += 1
+        analysis = nil
+        errorDescription = nil
     }
 
     private func complete(

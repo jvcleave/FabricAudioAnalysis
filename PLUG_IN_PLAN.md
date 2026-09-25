@@ -50,7 +50,7 @@ The two sources have different normalization windows: file RMS, bands, and flux 
 
 ### Audio File Analysis
 
-- **Settings:** selected audio file and analysis FPS (default `30`), in a Codable settings type with a procedural initializer. Store a security-scoped bookmark for sandboxed access; report a stale bookmark or inaccessible file instead of silently substituting another source. A sample graph may still require the user to reselect its file on another machine.
+- **Settings:** selected audio file and analysis FPS (default `30`), in a Codable settings type with a procedural initializer. Fabric Editor is not sandboxed, so new selections store a local file URL. Older saved bookmarks remain readable. A sample graph may still require the user to reselect its file on another machine.
 - **Inputs:** `Time` (`Float`, seconds; connected value is authoritative), `Loop` (`Bool`, default `true`), and `Playback Rate` (`Float`, default `1`; applies only to unconnected graph time).
 - **Additional outputs:** `Ready`, `Current Frame`, `Frame Count`, `Frame Rate`, `Duration`, and `Average BPM`. Publish an explicit not-ready state until the selected file has been analyzed; never publish measurements from an obsolete source or FPS setting.
 - Decode and analyze outside the render call. Once ready, select the exact precomputed frame for each requested time, including backward scrubbing, looping, and non-looping end holds. Changes to source or FPS invalidate the old result using a generation identifier. Define export behavior explicitly: an export started before analysis is ready must fail or report not-ready rather than silently using stale data.
@@ -106,9 +106,9 @@ while allowing a direct 3D scene path without an offscreen image pass.
 ## Audio file playback extension
 
 **Audio File Playback** is an audio-output Consumer with an `AVPlayer` owned
-for the graph execution lifetime. It stores a security-scoped file bookmark in
-Settings, or accepts a procedural File URL input. Play, loop, volume, and seek
-inputs control it; Current Time can drive Audio File Analysis's Time inlet.
-The two nodes select the same file independently, keeping offline analysis and
-sound playback reusable on their own. The sample graph wires playback time
-through file analysis to the geometry waveform.
+for the graph execution lifetime. It stores a local file URL in Settings, or
+accepts a procedural File URL input. Play, loop, volume, and seek inputs control
+it; Current Time and File URL drive Audio File Analysis's corresponding inlets.
+Both nodes can still select files independently when used on their own. The
+sample graph shares the player file selection and uses the analysis envelope
+to scale a box.

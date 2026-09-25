@@ -131,7 +131,7 @@ for (fileName, expectedNodeCount, expectedConnectionCount) in [
     ("LiveAudioAnalysis.fabric", 6, 8),
     ("Audio3DWaveformFile.fabric", 3, 2),
     ("Audio3DWaveformLive.fabric", 3, 2),
-    ("AudioWaveformPlayback.fabric", 7, 8),
+    ("AudioWaveformPlayback.fabric", 7, 9),
 ]
 {
     if fileName == "AudioWaveformPlayback.fabric"
@@ -668,8 +668,11 @@ if CommandLine.arguments.contains("--write-playback-sample")
 
     let timeOutput: NodePort<Float> = playerNode.port(named: "outputCurrentTime")
     let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
+    let fileURLOutput: NodePort<String> = playerNode.port(named: "outputFileURL")
+    let fileURLInput: ParameterPort<String> = analysisNode.port(named: "inputFileURL")
     let envelopeOutput: NodePort<Float> = analysisNode.port(named: "outputMediumEnvelope")
     guard playbackGraph.connect(timeOutput, to: timeInput) != nil,
+          playbackGraph.connect(fileURLOutput, to: fileURLInput) != nil,
           playbackGraph.connect(envelopeOutput, to: scaleOffsetNode.inputNumber1) != nil
     else
     {
@@ -713,7 +716,7 @@ if CommandLine.arguments.contains("--write-playback-sample")
     sceneDecoder.context = DecoderContext(documentContext: context)
     let reopened = try sceneDecoder.decode(Graph.self, from: readable)
     guard reopened.nodes.count == 7,
-          reopened.connections.count == 8,
+          reopened.connections.count == 9,
           reopened.nodes.contains(where: { type(of: $0).name == "Box Geometry" })
     else
     {
@@ -749,8 +752,16 @@ if CommandLine.arguments.contains("--verify-playback")
     let testGraph = Graph(context: context)
     let playerNode = playbackNodeClass.init(context: context)
     let analysisNode = fileNodeClass.init(context: context)
-    testGraph.addNode(playerNode)
-    testGraph.addNode(analysisNode)
+    let scaleOffsetNode = NumberBinaryOperator(context: context)
+    scaleOffsetNode.inputNumber2.value = 0.35
+    let scaleVectorNode = ComposeVectorNode(context: context, vectorType: .float3)
+    let boxNode = BoxGeometryNode(context: context)
+    let materialNode = BasicColorMaterialNode(context: context)
+    let meshNode = MeshNode(context: context)
+    for node in [playerNode, analysisNode, scaleOffsetNode, scaleVectorNode, boxNode, materialNode, meshNode]
+    {
+        testGraph.addNode(node)
+    }
     let fileURLInput: ParameterPort<String> = playerNode.port(named: "inputFileURL")
     let volumeInput: ParameterPort<Float> = playerNode.port(named: "inputVolume")
     let playingInput: ParameterPort<Bool> = playerNode.port(named: "inputPlaying")
@@ -760,7 +771,29 @@ if CommandLine.arguments.contains("--verify-playback")
     let durationOutput: NodePort<Float> = playerNode.port(named: "outputDuration")
     let readyOutput: NodePort<Bool> = playerNode.port(named: "outputReady")
     let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
-    guard testGraph.connect(currentTimeOutput, to: timeInput) != nil else
+    let fileURLOutput: NodePort<String> = playerNode.port(named: "outputFileURL")
+    let analysisFileURLInput: ParameterPort<String> = analysisNode.port(named: "inputFileURL")
+    let analysisReadyOutput: NodePort<Bool> = analysisNode.port(named: "outputReady")
+    let mediumEnvelopeOutput: NodePort<Float> = analysisNode.port(named: "outputMediumEnvelope")
+    guard testGraph.connect(currentTimeOutput, to: timeInput) != nil,
+          testGraph.connect(fileURLOutput, to: analysisFileURLInput) != nil,
+          testGraph.connect(mediumEnvelopeOutput, to: scaleOffsetNode.inputNumber1) != nil else
+    {
+        throw VerificationError.connectionFailed
+    }
+    for componentIndex in 0 ..< 3
+    {
+        let component: ParameterPort<Float> = scaleVectorNode.port(named: "inputComponent\(componentIndex)")
+        guard testGraph.connect(scaleOffsetNode.outputNumber, to: component) != nil else
+        {
+            throw VerificationError.connectionFailed
+        }
+    }
+    let scaleVector: NodePort<simd_float3> = scaleVectorNode.port(named: "outputVector")
+    guard testGraph.connect(scaleVector, to: meshNode.inputScale) != nil,
+          testGraph.connect(boxNode.outputGeometry, to: meshNode.inputGeometry) != nil,
+          testGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil
+    else
     {
         throw VerificationError.connectionFailed
     }
@@ -800,11 +833,32 @@ if CommandLine.arguments.contains("--verify-playback")
         RunLoop.current.run(until: Date().addingTimeInterval(0.05))
     }
     guard observedPlayback,
-          abs((timeInput.value ?? 0) - (currentTimeOutput.value ?? 0)) < 0.01
+          abs((timeInput.value ?? 0) - (currentTimeOutput.value ?? 0)) < 0.01,
+          analysisFileURLInput.value == audioURL.absoluteString
     else
     {
         throw VerificationError.playbackFailed(
             "Player time did not advance into Audio File Analysis: ready=\(readyOutput.value == true), duration=\(durationOutput.value ?? -1), playerTime=\(currentTimeOutput.value ?? -1), analysisTime=\(timeInput.value ?? -1)"
+        )
+    }
+
+    var observedAnalysis = false
+    for _ in 0 ..< 80
+    {
+        try executePlaybackPass()
+        if analysisReadyOutput.value == true,
+           (mediumEnvelopeOutput.value ?? 0) > 0,
+           (meshNode.object?.scale.x ?? 0) > 0.35
+        {
+            observedAnalysis = true
+            break
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+    }
+    guard observedAnalysis else
+    {
+        throw VerificationError.playbackFailed(
+            "Audio File Analysis did not process the player's selected file"
         )
     }
 
@@ -864,5 +918,5 @@ if CommandLine.arguments.contains("--verify-playback")
     {
         throw VerificationError.playbackFailed("Stopping the graph did not reset playback")
     }
-    print("Verified audio playback, pause, seek, loop, clock connection, and graph stop")
+    print("Verified audio playback, shared file analysis, pause, seek, loop, clock connection, and graph stop")
 }

@@ -379,6 +379,7 @@ if CommandLine.arguments.contains("--verify-playback")
     let currentTimeOutput: NodePort<Float> = playerNode.port(named: "outputCurrentTime")
     let durationOutput: NodePort<Float> = playerNode.port(named: "outputDuration")
     let readyOutput: NodePort<Bool> = playerNode.port(named: "outputReady")
+    let volumeOutput: NodePort<Float> = playerNode.port(named: "outputVolume")
     let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
     let fileURLOutput: NodePort<String> = playerNode.port(named: "outputFileURL")
     let analysisFileURLInput: ParameterPort<String> = analysisNode.port(named: "inputFileURL")
@@ -443,7 +444,8 @@ if CommandLine.arguments.contains("--verify-playback")
     }
     guard observedPlayback,
           abs((timeInput.value ?? 0) - (currentTimeOutput.value ?? 0)) < 0.01,
-          analysisFileURLInput.value == audioURL.absoluteString
+          analysisFileURLInput.value == audioURL.absoluteString,
+          volumeOutput.value == 0
     else
     {
         throw VerificationError.playbackFailed(
@@ -480,6 +482,14 @@ if CommandLine.arguments.contains("--verify-playback")
     {
         throw VerificationError.playbackFailed("Pause did not hold the player clock")
     }
+    volumeInput.value = 0.42
+    try executePlaybackPass()
+    guard abs((volumeOutput.value ?? -1) - 0.42) < 0.001 else
+    {
+        throw VerificationError.playbackFailed("Volume output did not follow the player gain")
+    }
+    volumeInput.value = 0
+    try executePlaybackPass()
 
     seekInput.value = 0.5
     var observedSeek = false
@@ -527,5 +537,5 @@ if CommandLine.arguments.contains("--verify-playback")
     {
         throw VerificationError.playbackFailed("Stopping the graph did not reset playback")
     }
-    print("Verified audio playback, shared file analysis, pause, seek, loop, clock connection, and graph stop")
+    print("Verified audio playback, shared file analysis, volume output, pause, seek, loop, clock connection, and graph stop")
 }

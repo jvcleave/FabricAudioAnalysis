@@ -85,7 +85,8 @@ The two sources have different normalization windows: file RMS, bands, and flux 
 **Audio File Playback** is an audio-output Consumer with an `AVPlayer` owned
 for the graph execution lifetime. It stores a local file URL in Settings, or
 accepts a procedural File URL input. Play, loop, volume, and seek inputs control
-it; Current Time and File URL drive Audio File Analysis's corresponding inlets.
+it; Volume reports the effective player gain, while Current Time and File URL
+drive Audio File Analysis's corresponding inlets.
 Both nodes can still select files independently when used on their own. The
 sample graph shares the player file selection and uses the analysis envelope
 to scale a box.

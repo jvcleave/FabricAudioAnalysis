@@ -295,6 +295,21 @@
               "isProxyPort" : false,
               "type" : "String"
             }
+          },
+          {
+            "name" : "outputVolume",
+            "payload" : {
+              "base" : {
+                "id" : "AFD3C09F-DA80-49F0-B5D4-2F049B4DBD09",
+                "kind" : "Outlet",
+                "name" : "Volume",
+                "portDescription" : "Effective player volume from the Volume input, clamped to 0 to 1",
+                "published" : false
+              },
+              "isParameterPort" : false,
+              "isProxyPort" : false,
+              "type" : "Float"
+            }
           }
         ]
       }

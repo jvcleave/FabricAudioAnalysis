@@ -52,6 +52,7 @@ public final class AudioFilePlaybackNode: Node
             ("outputReady", NodePort<Bool>(name: "Ready", kind: .Outlet, description: "True when the player item is ready")),
             ("outputFinished", NodePort<Bool>(name: "Finished", kind: .Outlet, description: "One graph-pass pulse when the player reaches the end")),
             ("outputFileURL", NodePort<String>(name: "File URL", kind: .Outlet, description: "Selected local file URL; connect to Audio File Analysis File URL")),
+            ("outputVolume", NodePort<Float>(name: "Volume", kind: .Outlet, description: "Effective player volume from the Volume input, clamped to 0 to 1")),
         ]
     }
 
@@ -66,6 +67,7 @@ public final class AudioFilePlaybackNode: Node
     public var outputReady: NodePort<Bool> { port(named: "outputReady") }
     public var outputFinished: NodePort<Bool> { port(named: "outputFinished") }
     public var outputFileURL: NodePort<String> { port(named: "outputFileURL") }
+    public var outputVolume: NodePort<Float> { port(named: "outputVolume") }
 
     public required init(context: Context)
     {
@@ -153,10 +155,12 @@ public final class AudioFilePlaybackNode: Node
         commandBuffer: MTLCommandBuffer
     ) throws
     {
+        let volume = effectiveVolume()
+        outputVolume.send(volume)
         if needsLoad || inputFileURL.valueDidChange
         {
             needsLoad = false
-            try loadSelectedFile()
+            try loadSelectedFile(volume: volume)
         }
         guard let player, let playerItem else
         {
@@ -172,7 +176,7 @@ public final class AudioFilePlaybackNode: Node
         }
         if inputVolume.valueDidChange
         {
-            player.volume = min(max(inputVolume.value ?? 1, 0), 1)
+            player.volume = volume
         }
         if inputPlaying.valueDidChange
         {
@@ -209,7 +213,7 @@ public final class AudioFilePlaybackNode: Node
         outputFinished.send(didFinish, force: didFinish)
     }
 
-    private func loadSelectedFile() throws
+    private func loadSelectedFile(volume: Float) throws
     {
         releasePlayer()
         let suppliedPath = (inputFileURL.value ?? "")
@@ -228,7 +232,7 @@ public final class AudioFilePlaybackNode: Node
         }
         let item = AVPlayerItem(url: fileURL)
         let newPlayer = AVPlayer(playerItem: item)
-        newPlayer.volume = min(max(inputVolume.value ?? 1, 0), 1)
+        newPlayer.volume = volume
         newPlayer.actionAtItemEnd = .pause
         playerItem = item
         player = newPlayer
@@ -241,6 +245,13 @@ public final class AudioFilePlaybackNode: Node
             self?.markEnd()
         }
         applyPlayingInput()
+    }
+
+    private func effectiveVolume() -> Float
+    {
+        let requestedVolume = inputVolume.value ?? 1
+        guard requestedVolume.isFinite else { return 1 }
+        return min(max(requestedVolume, 0), 1)
     }
 
     private func applyPlayingInput()

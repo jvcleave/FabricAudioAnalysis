@@ -47,6 +47,8 @@ for procedural graphs and overrides the Settings selection. Connect Current
 Time and File URL to Audio File Analysis's matching inputs to share the
 audible clock and file selection. Playback continues
 when the analysis node is still preparing its file measurements.
+Playback's Volume output reports its gain setting; use Audio File Analysis's
+RMS or envelope outputs for levels that change with the music.
 
 Three example graphs are in [FabricScenes](FabricScenes/README.md). The box
 examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
@@ -114,6 +116,7 @@ sources do not imply equal absolute sound levels.
 | File URL | Input | String | Empty | Optional absolute path or file URL, overriding Settings |
 | Playing / Loop | Input | Bool | true / true | Start or pause playback; restart at the end |
 | Volume | Input | Float | 1 | Audio output level, 0 to 1 |
+| Volume | Output | Float | 1 | Effective player gain, clamped to 0 to 1; it does not measure the music's loudness |
 | Seek Time | Input | Float | -1 | Set a nonnegative time in seconds to seek |
 | Current Time / Duration | Output | Float | 0 / 0 | Player time and file length in seconds |
 | Is Playing / Ready | Output | Bool | false / false | Player state |

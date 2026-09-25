@@ -17,6 +17,7 @@ public final class FabricAudioSourceProcessorPlugin: NSObject, FabricPlugin
     {
         [
             AudioFileAnalysisNode.self,
+            AudioFilePlaybackNode.self,
             LiveAudioAnalysisNode.self,
             Audio3DWaveformNode.self,
             AudioWaveformGeometryNode.self,

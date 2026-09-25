@@ -16,16 +16,21 @@
   in the source node's settings after opening it.
 - `AudioWaveformGeometryLive.fabric` uses Live Audio Analysis for the same
   geometry path. Allow Fabric microphone access when macOS asks.
+- `AudioWaveformPlayback.fabric` plays an audio file and connects the player's
+  Current Time to Audio File Analysis, which drives Audio Waveform Geometry.
+  Select the same file in both nodes' Settings after opening the graph.
 
 The box graphs add 0.35 to the source's Medium Envelope, then send that value to
 the box's X, Y, and Z scale components. The box remains visible during silence
 and grows as the envelope rises.
 
-All six graphs demonstrate typed plugin registration and connection persistence.
-They do not play sound. Regenerate the box graphs after changing node ports with
+All seven graphs demonstrate typed plugin registration and connection persistence.
+Only AudioWaveformPlayback plays sound. Regenerate the box graphs after changing node ports with
 `sh PluginVerification/verify.sh --write-samples` from the repository root.
 Regenerate the waveform scenes separately with
 `sh PluginVerification/verify.sh --write-waveform-samples`; this leaves edits to
 the existing box scenes untouched.
 Regenerate the geometry scenes with
 `sh PluginVerification/verify.sh --write-geometry-samples`.
+Regenerate the playback scene with
+`sh PluginVerification/verify.sh --write-playback-sample`.

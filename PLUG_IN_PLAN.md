@@ -102,3 +102,13 @@ triangle ribbon in XYZ space. Width, depth, amplitude, thickness, and visible
 row count are graph controls; a downstream Mesh and Material determine camera
 placement and appearance. This preserves the image node for existing graphs
 while allowing a direct 3D scene path without an offscreen image pass.
+
+## Audio file playback extension
+
+**Audio File Playback** is an audio-output Consumer with an `AVPlayer` owned
+for the graph execution lifetime. It stores a security-scoped file bookmark in
+Settings, or accepts a procedural File URL input. Play, loop, volume, and seek
+inputs control it; Current Time can drive Audio File Analysis's Time inlet.
+The two nodes select the same file independently, keeping offline analysis and
+sound playback reusable on their own. The sample graph wires playback time
+through file analysis to the geometry waveform.

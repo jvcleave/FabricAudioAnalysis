@@ -1,3 +1,4 @@
+import AVFoundation
 import Fabric
 import Foundation
 import Metal
@@ -15,6 +16,7 @@ private enum VerificationError: Error
     case graphRoundTripFailed
     case boxScaleFailed
     case waveformRenderFailed(String)
+    case playbackFailed(String)
 }
 
 let pluginID = "com.jvclabs.FabricAudioSourceProcessor"
@@ -29,6 +31,7 @@ guard PluginLoader.shared.loadedPlugins[pluginID] != nil else
 var discoveredNodes: [String: Node.Type] = [:]
 for (nodeID, displayName) in [
     ("AudioFileAnalysisNode", "Audio File Analysis"),
+    ("AudioFilePlaybackNode", "Audio File Playback"),
     ("LiveAudioAnalysisNode", "Live Audio Analysis"),
     ("Audio3DWaveformNode", "Audio 3D Waveform"),
     ("AudioWaveformGeometryNode", "Audio Waveform Geometry"),
@@ -55,6 +58,7 @@ let context = Context(
     stencilPixelFormat: .invalid
 )
 guard let fileNodeClass = discoveredNodes["AudioFileAnalysisNode"],
+      let playbackNodeClass = discoveredNodes["AudioFilePlaybackNode"],
       let liveNodeClass = discoveredNodes["LiveAudioAnalysisNode"],
       let waveformNodeClass = discoveredNodes["Audio3DWaveformNode"],
       let waveformGeometryClass = discoveredNodes["AudioWaveformGeometryNode"]
@@ -65,11 +69,13 @@ else
 
 let graph = Graph(context: context)
 let fileNode = fileNodeClass.init(context: context)
+let playbackNode = playbackNodeClass.init(context: context)
 let liveNode = liveNodeClass.init(context: context)
 let waveformNode = waveformNodeClass.init(context: context)
 let waveformGeometryNode = waveformGeometryClass.init(context: context)
 let numericNode = NumberBinaryOperator(context: context)
 graph.addNode(fileNode)
+graph.addNode(playbackNode)
 graph.addNode(liveNode)
 graph.addNode(waveformNode)
 graph.addNode(waveformGeometryNode)
@@ -77,6 +83,12 @@ graph.addNode(numericNode)
 
 let rmsOutput: NodePort<Float> = fileNode.port(named: "outputRMS")
 guard graph.connect(rmsOutput, to: numericNode.inputNumber1) != nil else
+{
+    throw VerificationError.connectionFailed
+}
+let playbackTime: NodePort<Float> = playbackNode.port(named: "outputCurrentTime")
+let analysisTime: ParameterPort<Float> = fileNode.port(named: "inputTime")
+guard graph.connect(playbackTime, to: analysisTime) != nil else
 {
     throw VerificationError.connectionFailed
 }
@@ -97,9 +109,10 @@ let encodedGraph = try JSONEncoder().encode(graph)
 let decoder = JSONDecoder()
 decoder.context = DecoderContext(documentContext: context)
 let reopenedGraph = try decoder.decode(Graph.self, from: encodedGraph)
-guard reopenedGraph.nodes.count == 5,
-      reopenedGraph.connections.count == 3,
+guard reopenedGraph.nodes.count == 6,
+      reopenedGraph.connections.count == 4,
       reopenedGraph.nodes.contains(where: { type(of: $0).name == "Audio File Analysis" }),
+      reopenedGraph.nodes.contains(where: { type(of: $0).name == "Audio File Playback" }),
       reopenedGraph.nodes.contains(where: { type(of: $0).name == "Live Audio Analysis" }),
       reopenedGraph.nodes.contains(where: { type(of: $0).name == "Audio 3D Waveform" }),
       reopenedGraph.nodes.contains(where: { type(of: $0).name == "Audio Waveform Geometry" })
@@ -107,7 +120,7 @@ else
 {
     throw VerificationError.graphRoundTripFailed
 }
-print("Saved and reopened all four plugin nodes with typed connections")
+print("Saved and reopened all five plugin nodes with typed connections")
 
 let existingSceneDirectory = URL(
     fileURLWithPath: FileManager.default.currentDirectoryPath,
@@ -118,6 +131,7 @@ for (fileName, expectedNodeCount, expectedConnectionCount) in [
     ("LiveAudioAnalysis.fabric", 6, 8),
     ("Audio3DWaveformFile.fabric", 3, 2),
     ("Audio3DWaveformLive.fabric", 3, 2),
+    ("AudioWaveformPlayback.fabric", 5, 4),
 ]
 {
     let sceneData = try Data(contentsOf: existingSceneDirectory.appending(path: fileName))
@@ -613,4 +627,211 @@ if CommandLine.arguments.contains("--write-geometry-samples")
         }
         print("Wrote \(fileName)")
     }
+}
+
+if CommandLine.arguments.contains("--write-playback-sample")
+{
+    let playbackGraph = Graph(context: context)
+    let playerNode = playbackNodeClass.init(context: context)
+    playerNode.offset = CGSize(width: -850, height: 0)
+    let analysisNode = fileNodeClass.init(context: context)
+    analysisNode.offset = CGSize(width: -500, height: 0)
+    let geometryNode = waveformGeometryClass.init(context: context)
+    geometryNode.offset = CGSize(width: -100, height: 0)
+    let materialNode = BasicColorMaterialNode(context: context)
+    materialNode.inputColor.value = simd_float4(0.22, 1, 0.35, 1)
+    materialNode.offset = CGSize(width: -100, height: 400)
+    let meshNode = MeshNode(context: context)
+    meshNode.inputCastsShadow.value = false
+    meshNode.inputDoubleSided.value = true
+    meshNode.offset = CGSize(width: 350, height: 100)
+    for node in [playerNode, analysisNode, geometryNode, materialNode, meshNode]
+    {
+        playbackGraph.addNode(node)
+    }
+
+    let timeOutput: NodePort<Float> = playerNode.port(named: "outputCurrentTime")
+    let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
+    let historyOutput: NodePort<ContiguousArray<Float>> = analysisNode.port(named: "outputWaveformHistory")
+    let historyInput: NodePort<ContiguousArray<Float>> = geometryNode.port(named: "inputHistory")
+    let geometryOutput: NodePort<Geometry> = geometryNode.port(named: "outputGeometry")
+    guard playbackGraph.connect(timeOutput, to: timeInput) != nil,
+          playbackGraph.connect(historyOutput, to: historyInput) != nil,
+          playbackGraph.connect(geometryOutput, to: meshNode.inputGeometry) != nil,
+          playbackGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil
+    else
+    {
+        throw VerificationError.connectionFailed
+    }
+
+    let encoded = try JSONEncoder().encode(playbackGraph)
+    let object = try JSONSerialization.jsonObject(with: encoded)
+    let readable = try JSONSerialization.data(
+        withJSONObject: object,
+        options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    )
+    let sceneDirectory = URL(
+        fileURLWithPath: FileManager.default.currentDirectoryPath,
+        isDirectory: true
+    ).appending(path: "FabricScenes", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(
+        at: sceneDirectory,
+        withIntermediateDirectories: true
+    )
+    try readable.write(to: sceneDirectory.appending(path: "AudioWaveformPlayback.fabric"))
+    let sceneDecoder = JSONDecoder()
+    sceneDecoder.context = DecoderContext(documentContext: context)
+    let reopened = try sceneDecoder.decode(Graph.self, from: readable)
+    guard reopened.nodes.count == 5,
+          reopened.connections.count == 4
+    else
+    {
+        throw VerificationError.graphRoundTripFailed
+    }
+    print("Wrote AudioWaveformPlayback.fabric")
+}
+
+if CommandLine.arguments.contains("--verify-playback")
+{
+    let temporaryDirectory = FileManager.default.temporaryDirectory
+        .appending(path: "fabric-audio-playback-\(UUID().uuidString)", directoryHint: .isDirectory)
+    try FileManager.default.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: temporaryDirectory) }
+    let audioURL = temporaryDirectory.appending(path: "test-tone.caf")
+    guard let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1),
+          let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 44_100),
+          let sampleData = buffer.floatChannelData else
+    {
+        throw VerificationError.playbackFailed("Could not prepare test audio")
+    }
+    buffer.frameLength = 44_100
+    for sampleIndex in 0 ..< Int(buffer.frameLength)
+    {
+        sampleData[0][sampleIndex] = sin(2 * Float.pi * 440 * Float(sampleIndex) / 44_100) * 0.1
+    }
+    do
+    {
+        let audioFile = try AVAudioFile(forWriting: audioURL, settings: format.settings)
+        try audioFile.write(from: buffer)
+    }
+
+    let testGraph = Graph(context: context)
+    let playerNode = playbackNodeClass.init(context: context)
+    let analysisNode = fileNodeClass.init(context: context)
+    testGraph.addNode(playerNode)
+    testGraph.addNode(analysisNode)
+    let fileURLInput: ParameterPort<String> = playerNode.port(named: "inputFileURL")
+    let volumeInput: ParameterPort<Float> = playerNode.port(named: "inputVolume")
+    let playingInput: ParameterPort<Bool> = playerNode.port(named: "inputPlaying")
+    let loopInput: ParameterPort<Bool> = playerNode.port(named: "inputLoop")
+    let seekInput: ParameterPort<Float> = playerNode.port(named: "inputSeekTime")
+    let currentTimeOutput: NodePort<Float> = playerNode.port(named: "outputCurrentTime")
+    let durationOutput: NodePort<Float> = playerNode.port(named: "outputDuration")
+    let readyOutput: NodePort<Bool> = playerNode.port(named: "outputReady")
+    let timeInput: ParameterPort<Float> = analysisNode.port(named: "inputTime")
+    guard testGraph.connect(currentTimeOutput, to: timeInput) != nil else
+    {
+        throw VerificationError.connectionFailed
+    }
+    fileURLInput.value = audioURL.absoluteString
+    volumeInput.value = 0
+    loopInput.value = false
+    let testRenderer = GraphRenderer(context: context, graph: testGraph)
+    try testRenderer.startExecution(graph: testGraph)
+
+    func executePlaybackPass() throws
+    {
+        guard let commandBuffer = device.makeCommandQueue()?.makeCommandBuffer() else
+        {
+            throw VerificationError.noCommandBuffer
+        }
+        try testRenderer.execute(
+            graph: testGraph,
+            executionInfo: testRenderer.currentExecutionInfo,
+            renderPassDescriptor: MTLRenderPassDescriptor(),
+            commandBuffer: commandBuffer
+        )
+        commandBuffer.commit()
+        commandBuffer.waitUntilCompleted()
+    }
+
+    var observedPlayback = false
+    for _ in 0 ..< 30
+    {
+        try executePlaybackPass()
+        if readyOutput.value == true,
+           (durationOutput.value ?? 0) > 0.9,
+           (currentTimeOutput.value ?? 0) > 0.05
+        {
+            observedPlayback = true
+            break
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+    }
+    guard observedPlayback,
+          abs((timeInput.value ?? 0) - (currentTimeOutput.value ?? 0)) < 0.01
+    else
+    {
+        throw VerificationError.playbackFailed(
+            "Player time did not advance into Audio File Analysis: ready=\(readyOutput.value == true), duration=\(durationOutput.value ?? -1), playerTime=\(currentTimeOutput.value ?? -1), analysisTime=\(timeInput.value ?? -1)"
+        )
+    }
+
+    playingInput.value = false
+    try executePlaybackPass()
+    let pausedTime = currentTimeOutput.value ?? 0
+    RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+    try executePlaybackPass()
+    guard abs((currentTimeOutput.value ?? 0) - pausedTime) < 0.04 else
+    {
+        throw VerificationError.playbackFailed("Pause did not hold the player clock")
+    }
+
+    seekInput.value = 0.5
+    var observedSeek = false
+    for _ in 0 ..< 20
+    {
+        try executePlaybackPass()
+        if abs((currentTimeOutput.value ?? 0) - 0.5) < 0.06
+        {
+            observedSeek = true
+            break
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.03))
+    }
+    guard observedSeek,
+          abs((timeInput.value ?? 0) - 0.5) < 0.06 else
+    {
+        throw VerificationError.playbackFailed("Seek did not update the analysis time")
+    }
+
+    loopInput.value = true
+    seekInput.value = 0.85
+    playingInput.value = true
+    var reachedEndOfLoop = false
+    var observedLoop = false
+    for _ in 0 ..< 35
+    {
+        try executePlaybackPass()
+        let time = currentTimeOutput.value ?? 0
+        if time > 0.8 { reachedEndOfLoop = true }
+        if reachedEndOfLoop, time < 0.3
+        {
+            observedLoop = true
+            break
+        }
+        RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+    }
+    guard observedLoop else
+    {
+        throw VerificationError.playbackFailed("Loop did not restart the player clock")
+    }
+    try testRenderer.stopExecution(graph: testGraph)
+    let isPlayingOutput: NodePort<Bool> = playerNode.port(named: "outputPlaying")
+    guard isPlayingOutput.value == false,
+          currentTimeOutput.value == 0 else
+    {
+        throw VerificationError.playbackFailed("Stopping the graph did not reset playback")
+    }
+    print("Verified audio playback, pause, seek, loop, clock connection, and graph stop")
 }

@@ -11,7 +11,7 @@ analyzer, and a streaming onset detector. The analyzer emits raw RMS,
 loudness, five frequency-band energies, spectral flux, and spectral centroid.
 
 The `.fabricplugin` development bundle registers **Audio File Analysis**,
-**Live Audio Analysis**, **Audio 3D Waveform**, and **Audio Waveform Geometry**
+**Audio File Playback**, **Live Audio Analysis**, **Audio 3D Waveform**, and **Audio Waveform Geometry**
 with stable, typed ports. The file node decodes a selected audio file in
 bounded chunks and publishes compact, source-normalized measurements at graph
 time. The live node captures the system default microphone, analyzes samples
@@ -39,7 +39,16 @@ version uses the system default microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric
 Editor does so already.
 
-Six example graphs are in [FabricScenes](FabricScenes/README.md). The box
+Audio File Playback uses `AVPlayer` to play a selected local audio file. It
+starts when the graph runs if Playing is enabled, pauses when Playing is off,
+and stops when graph execution ends. Select the file in node Settings for a
+saved security-scoped bookmark. The File URL inlet also accepts an absolute
+path or file URL for procedural graphs and overrides the Settings selection.
+Connect its Current Time output to Audio File Analysis's Time input to follow
+the audible clock, and select the same file in both nodes. Playback continues
+when the analysis node is still preparing its file measurements.
+
+Seven example graphs are in [FabricScenes](FabricScenes/README.md). The box
 examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
 machine-specific bookmark.
@@ -112,6 +121,18 @@ sources do not imply equal absolute sound levels.
 | Running | Output | Bool | false | True after the microphone engine starts |
 | Sample Rate | Output | Float | 0 before capture | Input sample rate in Hz |
 
+### Audio File Playback
+
+| Port | Direction | Fabric type | Default | Description |
+| --- | --- | --- | --- | --- |
+| File URL | Input | String | Empty | Optional absolute path or file URL, overriding Settings |
+| Playing / Loop | Input | Bool | true / true | Start or pause playback; restart at the end |
+| Volume | Input | Float | 1 | Audio output level, 0 to 1 |
+| Seek Time | Input | Float | -1 | Set a nonnegative time in seconds to seek |
+| Current Time / Duration | Output | Float | 0 / 0 | Player time and file length in seconds |
+| Is Playing / Ready | Output | Bool | false / false | Player state |
+| Finished | Output | Bool | false | One graph-pass pulse at the file end |
+
 ### Audio 3D Waveform
 
 | Port | Direction | Fabric type | Default or requirement | Description |
@@ -175,6 +196,13 @@ Generate and verify the geometry examples with:
 
 ```sh
 sh PluginVerification/verify.sh --write-geometry-samples
+```
+
+Generate the playback example and check play, pause, seek, and the clock
+connection using a temporary muted test tone:
+
+```sh
+sh PluginVerification/verify.sh --write-playback-sample --verify-playback
 ```
 
 `PluginVerification/Package.resolved` matches the selected Fabric checkout's

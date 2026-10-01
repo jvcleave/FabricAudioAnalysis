@@ -1,8 +1,7 @@
 import Foundation
 
 /// Streaming flux threshold adapted from AudioSourceProcessorExample commit
-/// 4db4e252f88339e7f7833fa37a42230779b4a904. File analysis may replace
-/// these provisional decisions with its centered, whole-source onset pass.
+/// 4db4e252f88339e7f7833fa37a42230779b4a904.
 public final class AudioOnsetDetector
 {
     private let historyLimit = 17

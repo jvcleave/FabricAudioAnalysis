@@ -1,38 +1,23 @@
 import AudioSourceProcessorCore
 import Fabric
 
-/// Stable shared outlet keys for file and microphone analysis nodes.
+/// Stable outlet keys for live microphone analysis.
 enum AudioAnalysisPortLayout
 {
-    enum Source
-    {
-        case file
-        case microphone
-
-        var normalizationWindow: String
-        {
-            switch self
-            {
-                case .file: return "whole-file"
-                case .microphone: return "rolling 180-frame"
-            }
-        }
-    }
-
-    static func outputs(for source: Source) -> [(name: String, port: Fabric.Port)]
+    static func outputs() -> [(name: String, port: Fabric.Port)]
     {
         [
             ("outputRMS", NodePort<Float>(name: "RMS", kind: .Outlet, description: "Raw root-mean-square audio amplitude")),
-            ("outputRMSNormalized", NodePort<Float>(name: "RMS Normalized", kind: .Outlet, description: "RMS normalized to the \(source.normalizationWindow) maximum, 0 to 1")),
+            ("outputRMSNormalized", NodePort<Float>(name: "RMS Normalized", kind: .Outlet, description: "RMS normalized to the rolling 180-frame maximum, 0 to 1")),
             ("outputLoudnessDB", NodePort<Float>(name: "Loudness dB", kind: .Outlet, description: "Audio loudness in decibels")),
             ("outputLoudnessNormalized", NodePort<Float>(name: "Loudness Normalized", kind: .Outlet, description: "Loudness mapped from -60 to 0 dB into 0 to 1")),
-            ("outputOnset", NodePort<Bool>(name: "Onset", kind: .Outlet, description: "Whether the published analysis frame has an onset")),
-            ("outputSubBass", NodePort<Float>(name: "Sub Bass", kind: .Outlet, description: "Energy from 20 to 60 Hz, normalized to the \(source.normalizationWindow) maximum")),
-            ("outputBass", NodePort<Float>(name: "Bass", kind: .Outlet, description: "Energy from 60 to 250 Hz, normalized to the \(source.normalizationWindow) maximum")),
-            ("outputLowMid", NodePort<Float>(name: "Low Mid", kind: .Outlet, description: "Energy from 250 to 500 Hz, normalized to the \(source.normalizationWindow) maximum")),
-            ("outputMid", NodePort<Float>(name: "Mid", kind: .Outlet, description: "Energy from 500 to 2000 Hz, normalized to the \(source.normalizationWindow) maximum")),
-            ("outputHigh", NodePort<Float>(name: "High", kind: .Outlet, description: "Energy from 2000 Hz to Nyquist or 20000 Hz, normalized to the \(source.normalizationWindow) maximum")),
-            ("outputSpectralFlux", NodePort<Float>(name: "Spectral Flux", kind: .Outlet, description: "Positive spectral change normalized to the \(source.normalizationWindow) maximum, 0 to 1")),
+            ("outputOnset", NodePort<Bool>(name: "Onset", kind: .Outlet, description: "Pulses once when newly captured frames contain an onset")),
+            ("outputSubBass", NodePort<Float>(name: "Sub Bass", kind: .Outlet, description: "Energy from 20 to 60 Hz, normalized to the rolling 180-frame maximum")),
+            ("outputBass", NodePort<Float>(name: "Bass", kind: .Outlet, description: "Energy from 60 to 250 Hz, normalized to the rolling 180-frame maximum")),
+            ("outputLowMid", NodePort<Float>(name: "Low Mid", kind: .Outlet, description: "Energy from 250 to 500 Hz, normalized to the rolling 180-frame maximum")),
+            ("outputMid", NodePort<Float>(name: "Mid", kind: .Outlet, description: "Energy from 500 to 2000 Hz, normalized to the rolling 180-frame maximum")),
+            ("outputHigh", NodePort<Float>(name: "High", kind: .Outlet, description: "Energy from 2000 Hz to Nyquist or 20000 Hz, normalized to the rolling 180-frame maximum")),
+            ("outputSpectralFlux", NodePort<Float>(name: "Spectral Flux", kind: .Outlet, description: "Positive spectral change normalized to the rolling 180-frame maximum, 0 to 1")),
             ("outputSpectralCentroid", NodePort<Float>(name: "Spectral Centroid", kind: .Outlet, description: "Spectral center of mass in hertz")),
             ("outputPeakRMS", NodePort<Float>(name: "Peak RMS", kind: .Outlet, description: "Peak-held normalized RMS, 0 to 1")),
             ("outputPeakFlux", NodePort<Float>(name: "Peak Flux", kind: .Outlet, description: "Peak-held normalized spectral flux, 0 to 1")),

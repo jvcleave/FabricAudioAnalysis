@@ -1,7 +1,7 @@
 import Foundation
 
-/// A signed, downsampled waveform row. Quantization keeps long file analyses
-/// compact; the full PCM window is discarded after each analysis frame.
+/// A signed, downsampled waveform row. Quantization keeps live history compact;
+/// the full PCM window is discarded after each analysis frame.
 public struct AudioWaveformRow: Equatable, Sendable
 {
     public static let sampleCount = 192

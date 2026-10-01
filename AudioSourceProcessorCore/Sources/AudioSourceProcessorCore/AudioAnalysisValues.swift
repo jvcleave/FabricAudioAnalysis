@@ -51,7 +51,7 @@ public struct AudioFrameMeasurements: Codable, Equatable, Sendable
     }
 }
 
-/// Compact result shared by the file and microphone adapters. It intentionally
+/// Compact live analysis result. It intentionally
 /// contains no PCM samples, AVFoundation objects, or Fabric types.
 public struct AudioAnalysisSnapshot: Codable, Equatable, Sendable
 {

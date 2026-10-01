@@ -1,72 +1,45 @@
 # Fabric Audio Source Processor
 
-A work-in-progress Fabric plug-in for audio-file and live-microphone analysis.
-The planned node behavior, ports, and milestones are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
+A Fabric plug-in for live microphone analysis. It registers **Live Audio Analysis**
+with stable, typed ports for driving audio-reactive graphs. The behavior and
+acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
 
 ## Current state
 
 `AudioSourceProcessorCore` is a Swift 5.9, macOS 15+ package with no Fabric
 dependency. It defines immutable analysis values, a 2048-point FFT frame
-analyzer, and a streaming onset detector. The analyzer emits raw RMS,
-loudness, five frequency-band energies, spectral flux, and spectral centroid.
+analyzer, a streaming onset detector, and microphone capture. The analyzer
+emits raw RMS, loudness, five frequency-band energies, spectral flux, spectral
+centroid, peak levels, and envelopes.
 
-The `.fabricplugin` development bundle registers **Audio File Analysis**,
-**Audio File Playback**, and **Live Audio Analysis**
-with stable, typed ports. The file node decodes a selected audio file in
-bounded chunks and publishes compact, source-normalized measurements at graph
-time. The live node captures the system default microphone, analyzes samples
-outside Fabric's render call, and publishes the newest completed frame. Its
-fixed-size sample ring drops old samples if
-analysis falls behind instead of building an unbounded queue.
-Both sources also publish 24 signed waveform rows with 192 samples each. File
-rows are quantized to one byte per sample during analysis, and live capture
-keeps only its 24 newest rows. This gives downstream nodes a bounded input
-without retaining full PCM windows.
+The node captures the system default microphone and analyzes samples outside
+Fabric's render call. Its fixed-size sample ring drops old samples if analysis
+falls behind instead of building an unbounded queue. Each graph pass publishes
+the newest completed snapshot and preserves any onset since the previous pass.
+It also publishes 24 oldest-to-newest waveform rows of 192 signed samples each.
+Rows use one byte per sample internally, and capture retains only the newest
+24 rows.
 
-For the file node, choose an audio file in its settings and set the analysis
-FPS (default 30). `Ready` stays false while analysis runs. Once ready, a
-connected `Time` input selects the frame in seconds; otherwise graph time is
-multiplied by `Playback Rate`. `Loop` wraps time at the file duration. The node
-analyzes audio without playing it. Saved graphs carry a local file URL. Reselect
-the file if its path changes or the graph moves to a different machine. Older
-graphs containing security-scoped bookmarks remain readable.
+`Enabled` defaults to true. Capture starts while the graph runs, after macOS
+grants Fabric microphone access, and stops when the graph stops or the node is
+disabled. `Running` and `Sample Rate` report capture status. Settings offer
+analysis FPS (default 30, range 1 to 120). The node uses the system default
+microphone without device selection.
 
-For the live node, `Enabled` defaults to true. Capture starts while the graph
-runs, after macOS grants Fabric microphone access, and stops when the graph
-stops or the node is disabled. `Running` and `Sample Rate` report capture
-status. Settings offer analysis FPS (default 30, range 1 to 120); the first
-version uses the system default microphone without device selection.
-The host application must declare `NSMicrophoneUsageDescription`; Fabric
-Editor does so already.
+The host application must declare `NSMicrophoneUsageDescription`; Fabric Editor
+does so already.
 
-Audio File Playback uses `AVPlayer` to play a selected local audio file. It
-starts when the graph runs if Playing is enabled, pauses when Playing is off,
-and stops when graph execution ends. Select the file in node Settings to save
-its local URL. The File URL inlet also accepts an absolute path or file URL
-for procedural graphs and overrides the Settings selection. Connect Current
-Time and File URL to Audio File Analysis's matching inputs to share the
-audible clock and file selection. Playback continues
-when the analysis node is still preparing its file measurements.
-Playback's Volume output reports its gain setting; use Audio File Analysis's
-RMS or envelope outputs for levels that change with the music.
-
-Four example graphs are in [FabricScenes](FabricScenes/README.md). The box
-examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
-after opening the file graph; the sample deliberately contains no
-machine-specific file path.
-The playback example connects the player's Current Time and File URL to Audio
-File Analysis and uses Medium Envelope to scale a box. Select the file once in
-Playback Settings; Analysis uses that selection.
-The live Depth Blocks example uses Waveform History to scale 288 instanced
-boxes independently. Medium Envelope amplifies their height, and Onset
-briefly changes their color. It uses only Fabric's existing nodes.
+Two example graphs are in [FabricScenes](FabricScenes/README.md).
+`LiveAudioAnalysis.fabric` uses Medium Envelope to scale a rendered box.
+`AudioDepthBlocksLive.fabric` uses Waveform History to scale 288 instanced boxes
+independently; Medium Envelope amplifies their depth, and Onset briefly changes
+their color. Both use existing Fabric nodes for the visuals.
 
 ## Node port reference
 
-Both nodes expose these outlets. All normalized values are in `0...1`.
-The file node uses whole-file maxima for RMS, bands, and flux; the live node
-uses a rolling 180-frame maximum. Equal normalized values from different
-sources do not imply equal absolute sound levels.
+All normalized values are in `0...1`. RMS, frequency bands, and spectral flux
+use a rolling 180-frame maximum. Loudness Normalized uses a fixed
+`-60...0 dB` mapping.
 
 | Port | Direction | Fabric type | Default or requirement | Description |
 | --- | --- | --- | --- | --- |
@@ -74,7 +47,7 @@ sources do not imply equal absolute sound levels.
 | RMS Normalized | Output | Float | 0 before data | RMS divided by the source's normalization-window maximum |
 | Loudness dB | Output | Float | -140 before data | `20 log10(RMS)` in decibels |
 | Loudness Normalized | Output | Float | 0 before data | Fixed mapping of `-60...0 dB` to `0...1` |
-| Onset | Output | Bool | false before data | File-frame onset flag; live onset pulses once for captured frames since the previous graph pass |
+| Onset | Output | Bool | false before data | Pulses once for captured onsets since the previous graph pass |
 | Sub Bass | Output | Float | 0 before data | Normalized energy at 20 to 60 Hz |
 | Bass | Output | Float | 0 before data | Normalized energy at 60 to 250 Hz |
 | Low Mid | Output | Float | 0 before data | Normalized energy at 250 to 500 Hz |
@@ -89,21 +62,6 @@ sources do not imply equal absolute sound levels.
 | Slow Envelope | Output | Float | 0 before data | Normalized RMS envelope with slow release |
 | Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for downstream nodes |
 
-### Audio File Analysis
-
-| Port | Direction | Fabric type | Default or requirement | Description |
-| --- | --- | --- | --- | --- |
-| Time | Input | Float | Graph time when unconnected | Requested playback time in seconds |
-| Loop | Input | Bool | true | Wraps time at the source duration |
-| Playback Rate | Input | Float | 1 | Scales graph time only when Time is unconnected |
-| File URL | Input | String | Empty | Optional absolute path or file URL, overriding Settings |
-| Ready | Output | Bool | false | True after the selected file finishes analysis |
-| Current Frame | Output | Int | 0 before data | Zero-based selected analysis frame |
-| Frame Count | Output | Int | 0 before data | Number of analyzed frames |
-| Frame Rate | Output | Float | 0 before data | Actual analysis frames per second |
-| Duration | Output | Float | 0 before data | File duration in seconds |
-| Average BPM | Output | Float | 0 without onsets | Estimate from the median onset interval |
-
 ### Live Audio Analysis
 
 | Port | Direction | Fabric type | Default or requirement | Description |
@@ -111,20 +69,6 @@ sources do not imply equal absolute sound levels.
 | Enabled | Input | Bool | true | Allows capture while the graph runs |
 | Running | Output | Bool | false | True after the microphone engine starts |
 | Sample Rate | Output | Float | 0 before capture | Input sample rate in Hz |
-
-### Audio File Playback
-
-| Port | Direction | Fabric type | Default | Description |
-| --- | --- | --- | --- | --- |
-| File URL | Input | String | Empty | Optional absolute path or file URL, overriding Settings |
-| Playing / Loop | Input | Bool | true / true | Start or pause playback; restart at the end |
-| Volume | Input | Float | 1 | Audio output level, 0 to 1 |
-| Volume | Output | Float | 1 | Effective player gain, clamped to 0 to 1; it does not measure the music's loudness |
-| Seek Time | Input | Float | -1 | Set a nonnegative time in seconds to seek |
-| Current Time / Duration | Output | Float | 0 / 0 | Player time and file length in seconds |
-| Is Playing / Ready | Output | Bool | false / false | Player state |
-| Finished | Output | Bool | false | One graph-pass pulse at the file end |
-| File URL | Output | String | Empty before selection | Selected local file URL for downstream analysis |
 
 Run the focused core checks with:
 
@@ -148,19 +92,14 @@ The target builds the adjacent `../Fabric` checkout in an isolated
 `~/Library/Application Support/Fabric/Plugins/`. To use a different checkout,
 pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The first
 verified bundle build used Fabric `69b8a580a1ef79f5c8a9b150b5d3483193c541ac`.
+The live-only Debug bundle and discovery checks were verified against the
+adjacent Fabric checkout at `940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e`.
 
 After building, check registration and graph save/reopen through Fabric's own
 `NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh
-```
-
-Generate the playback example and check play, pause, seek, and the clock
-connection using a temporary muted test tone:
-
-```sh
-sh PluginVerification/verify.sh --write-playback-sample --verify-playback
 ```
 
 `PluginVerification/Package.resolved` matches the selected Fabric checkout's
@@ -173,7 +112,6 @@ external plug-ins at startup.
 
 The analyzer and onset threshold are adapted from
 [AudioSourceProcessorExample](https://github.com/jvcleave/AudioSourceProcessorExample)
-commit `4db4e252f88339e7f7833fa37a42230779b4a904`. This package stores
-compact measurements instead of the sample app's per-frame PCM arrays. A
-separate analyzer instance is required for each ordered source stream because
-spectral flux depends on its preceding frame.
+commit `4db4e252f88339e7f7833fa37a42230779b4a904`. A separate analyzer instance
+is required for each ordered microphone stream because spectral flux depends
+on its preceding frame.

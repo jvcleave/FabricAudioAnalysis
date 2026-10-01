@@ -1,5 +1,5 @@
 {
-  "originHash" : "a8fa055f73f0e5c79fbd03c66458a6d514b6c94814416b263e0b7b9146f868a6",
+  "originHash" : "d094ca9a64144baed5fdb7ee8a7bdddb0a8356f8fdfc6d815c56772c49e40be4",
   "pins" : [
     {
       "identity" : "anycodable",
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Fabric-Project/MathExpressionEngine",
       "state" : {
-        "revision" : "dcf76b0319e09852df70cd79939fc35f3bfbc237",
-        "version" : "1.1.0"
+        "revision" : "bc28a1cce4ec7206d4f9ada389bbd10218a9046a",
+        "version" : "1.2.0"
       }
     },
     {

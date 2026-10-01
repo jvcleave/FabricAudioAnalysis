@@ -21,7 +21,7 @@
 	<key>FabricPluginAPIVersion</key>
 	<integer>1</integer>
 	<key>FabricPluginDescription</key>
-	<string>Audio-file and live-microphone analysis nodes for Fabric.</string>
+	<string>Live-microphone analysis for Fabric.</string>
 	<key>FabricPluginDisplayName</key>
 	<string>Fabric Audio Source Processor</string>
 	<key>NSPrincipalClass</key>

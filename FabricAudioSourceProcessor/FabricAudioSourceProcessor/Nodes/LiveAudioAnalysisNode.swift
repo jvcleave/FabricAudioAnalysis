@@ -45,7 +45,7 @@ public final class LiveAudioAnalysisNode: Node
         [
             ("inputEnabled", ParameterPort(parameter: BoolParameter("Enabled", true, .toggle, "Capture while the graph executes"))),
         ] +
-        AudioAnalysisPortLayout.outputs(for: .microphone) +
+        AudioAnalysisPortLayout.outputs() +
         [
             ("outputRunning", NodePort<Bool>(name: "Running", kind: .Outlet, description: "True while microphone capture is active")),
             ("outputSampleRate", NodePort<Float>(name: "Sample Rate", kind: .Outlet, description: "Microphone sample rate in hertz")),

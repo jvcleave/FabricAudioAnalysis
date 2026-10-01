@@ -50,13 +50,16 @@ when the analysis node is still preparing its file measurements.
 Playback's Volume output reports its gain setting; use Audio File Analysis's
 RMS or envelope outputs for levels that change with the music.
 
-Three example graphs are in [FabricScenes](FabricScenes/README.md). The box
+Four example graphs are in [FabricScenes](FabricScenes/README.md). The box
 examples use the source node's Medium Envelope to scale a rendered box uniformly. Choose a file
 after opening the file graph; the sample deliberately contains no
 machine-specific file path.
 The playback example connects the player's Current Time and File URL to Audio
 File Analysis and uses Medium Envelope to scale a box. Select the file once in
 Playback Settings; Analysis uses that selection.
+The live Depth Blocks example uses Waveform History to scale 288 instanced
+boxes independently. Medium Envelope amplifies their height, and Onset
+briefly changes their color. It uses only Fabric's existing nodes.
 
 ## Node port reference
 

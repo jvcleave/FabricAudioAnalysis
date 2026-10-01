@@ -18,7 +18,14 @@ falls behind instead of building an unbounded queue. Each graph pass publishes
 the newest completed snapshot and preserves any onset since the previous pass.
 It also publishes 24 oldest-to-newest waveform rows of 192 signed samples each.
 Rows use one byte per sample internally, and capture retains only the newest
-24 rows.
+24 rows. The node expands those rows into floats only when Waveform History
+is connected or published. Reused analysis frames and onset clearing reuse
+the existing waveform output.
+
+`Dropped Samples` reports the cumulative number of mono input samples lost
+to ring overflow or lock contention. Counting never waits for a lock in the
+audio callback. The count resets when capture restarts, the graph stops, or
+the node is disabled.
 
 `Enabled` defaults to true. Capture starts while the graph runs, after macOS
 grants Fabric microphone access, and stops when the graph stops or the node is
@@ -59,7 +66,7 @@ use a rolling 180-frame maximum. Loudness Normalized uses a fixed
 | Fast Envelope | Output | Float | 0 before data | Normalized RMS envelope with fast release |
 | Medium Envelope | Output | Float | 0 before data | Normalized RMS envelope with medium release |
 | Slow Envelope | Output | Float | 0 before data | Normalized RMS envelope with slow release |
-| Waveform History | Output | Array of Float | 24 × 192 zero samples before data | Signed, oldest-to-newest waveform rows for downstream nodes |
+| Waveform History | Output | Array of Float | 24 × 192 zero samples before data when connected or published | Signed, oldest-to-newest waveform rows for downstream nodes |
 
 ### Live Audio Analysis
 
@@ -68,6 +75,7 @@ use a rolling 180-frame maximum. Loudness Normalized uses a fixed
 | Enabled | Input | Bool | true | Allows capture while the graph runs |
 | Running | Output | Bool | false | True after the microphone engine starts |
 | Sample Rate | Output | Float | 0 before capture | Input sample rate in Hz |
+| Dropped Samples | Output | Index (Int) | 0 before capture | Cumulative mono samples lost to ring overflow or lock contention in the current capture generation |
 
 Run the focused core checks with:
 
@@ -99,8 +107,8 @@ When replacing an earlier development bundle, move it out of Fabric's
 same Live Audio Analysis node name, so installing both causes a registration
 conflict. This plug-in uses the identifier `com.jvclabs.FabricAudioAnalysis`.
 
-After building, check registration, graph save/reopen, uniform box scaling,
-and onset color flashes through Fabric's own `NodeRegistry`:
+After building, check registration, graph save/reopen, waveform demand,
+uniform box scaling, and onset color flashes through Fabric's own `NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh
@@ -114,6 +122,11 @@ accepts `FABRIC_SPM_SCRATCH_PATH` to reuse an existing compatible Fabric build.
 The box check disables microphone capture and supplies envelope and onset
 values, so it can verify scaling and the red flash without requesting
 microphone access.
+
+Pass `--measure-box` to the verification script for a synthetic CPU timing
+sample of the saved graph. It warms up for 200 passes, then reports median
+and p95 time over 1000 passes with changing envelope and onset values. This
+measurement excludes microphone capture, FFT, drawing, and GPU completion.
 
 Restart Fabric Editor after updating the installed bundle; its registry loads
 external plug-ins at startup.

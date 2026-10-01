@@ -43,6 +43,8 @@ embedding Fabric, and installs a signed development bundle under
 - **Waveform:** `Waveform History` contains 24 oldest-to-newest rows with 192
   signed samples each, flattened into a float array and padded with zeroes.
 - **Capture status:** `Running` and `Sample Rate` (Hz).
+- **Diagnostics:** `Dropped Samples` counts mono samples lost to ring overflow
+  or lock contention. It resets with the capture generation.
 
 RMS, bands, and flux normalize to a rolling 180-frame maximum. Normalized
 outputs stay in `0...1`; normalized loudness maps `-60...0 dB` to `0...1`.
@@ -52,6 +54,9 @@ retained snapshots. Stop capture and remove its tap when the graph stops, the
 node is disabled, or settings change. Ignore callbacks from old capture
 generations. Denied permission and missing input devices report a recoverable
 error. Preserve the newest measurements when no new snapshot is available.
+Expand waveform history only for a connected or published output, and reuse
+it until a new analysis frame or capture generation arrives. Report input
+drops without waiting for a lock in the audio callback.
 
 ## Verification and completion criteria
 
@@ -59,6 +64,9 @@ error. Preserve the newest measurements when no new snapshot is available.
 - Typed node connections survive graph save and reopen.
 - Core checks cover silence, known-frequency signals, onset behavior, finite
   normalized values, waveform history, and bounded capture handoff.
+- Overflow and contention checks verify cumulative dropped-sample counts.
+- Waveform checks verify unused outputs skip expansion and connected or
+  published outputs receive zero-padded history before capture begins.
 - The Debug bundle builds against the selected Fabric checkout and passes
   installed-bundle discovery checks.
 - `LiveAudioAnalysis.fabric` reopens with its connections intact and remains

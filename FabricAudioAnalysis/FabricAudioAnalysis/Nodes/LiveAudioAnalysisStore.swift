@@ -11,6 +11,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         let revision: Int
         let isRunning: Bool
         let sampleRate: Float
+        let droppedSampleCount: Int
         let snapshot: AudioAnalysisSnapshot?
         let waveformRows: [AudioWaveformRow]
         let errorDescription: String?
@@ -23,6 +24,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
     private var revision = 0
     private var isRunning = false
     private var sampleRate: Float = 0
+    private var droppedSampleCount = 0
     private var latestSnapshot: AudioAnalysisSnapshot?
     private var waveformRows: [AudioWaveformRow] = []
     private var hasPendingOnset = false
@@ -96,10 +98,14 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
                     framesPerSecond: framesPerSecond
                 )
                 storeReference.value?.markRunning(requestGeneration, sampleRate: sampleRate)
-                try await capture.run
-                { frame in
-                    storeReference.value?.receive(requestGeneration, frame: frame)
-                }
+                try await capture.run(
+                    onDroppedSampleCount: { count in
+                        storeReference.value?.recordDroppedSamples(requestGeneration, count: count)
+                    },
+                    onFrame: { frame in
+                        storeReference.value?.receive(requestGeneration, frame: frame)
+                    }
+                )
             }
             catch is CancellationError
             {
@@ -116,7 +122,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
 
     /// Consuming the pending onset ensures a pulse survives coalesced capture
     /// frames and clears on the next graph pass even without a new frame.
-    func takeStateForGraphPass() -> State
+    func takeStateForGraphPass(includeWaveformRows: Bool) -> State
     {
         lock.lock()
         defer { lock.unlock() }
@@ -127,8 +133,9 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
             revision: revision,
             isRunning: isRunning,
             sampleRate: sampleRate,
+            droppedSampleCount: droppedSampleCount,
             snapshot: snapshot,
-            waveformRows: waveformRows,
+            waveformRows: includeWaveformRows ? waveformRows : [],
             errorDescription: errorDescription
         )
     }
@@ -145,6 +152,7 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         revision += 1
         isRunning = false
         sampleRate = 0
+        droppedSampleCount = 0
         latestSnapshot = nil
         waveformRows.removeAll(keepingCapacity: true)
         hasPendingOnset = false
@@ -174,6 +182,17 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
             waveformRows.removeFirst()
         }
         hasPendingOnset = hasPendingOnset || snapshot.onset
+        revision += 1
+    }
+
+    private func recordDroppedSamples(_ requestGeneration: Int, count: Int)
+    {
+        lock.lock()
+        defer { lock.unlock() }
+        guard generation == requestGeneration,
+              droppedSampleCount != count
+        else { return }
+        droppedSampleCount = count
         revision += 1
     }
 

@@ -26,6 +26,7 @@ public final class LiveAudioAnalysisNode: Node
     private let analysisStore: LiveAudioAnalysisStore
     private weak var settingsModel: LiveAudioAnalysisSettingsModel?
     private var lastPublishedState: PublishedState?
+    private var lastPublishedWaveform: WaveformPublication?
 
     private enum CodingKeys: String, CodingKey
     {
@@ -39,6 +40,12 @@ public final class LiveAudioAnalysisNode: Node
         let onset: Bool
     }
 
+    private struct WaveformPublication: Equatable
+    {
+        let generation: Int
+        let frameIndex: Int?
+    }
+
     public override class func registerPorts(context: Context) -> [(name: String, port: Fabric.Port)]
     {
         super.registerPorts(context: context) +
@@ -49,12 +56,14 @@ public final class LiveAudioAnalysisNode: Node
         [
             ("outputRunning", NodePort<Bool>(name: "Running", kind: .Outlet, description: "True while microphone capture is active")),
             ("outputSampleRate", NodePort<Float>(name: "Sample Rate", kind: .Outlet, description: "Microphone sample rate in hertz")),
+            ("outputDroppedSamples", NodePort<Int>(name: "Dropped Samples", kind: .Outlet, description: "Mono input samples lost to buffer overflow or contention since capture restarted")),
         ]
     }
 
     public var inputEnabled: ParameterPort<Bool> { port(named: "inputEnabled") }
     public var outputRunning: NodePort<Bool> { port(named: "outputRunning") }
     public var outputSampleRate: NodePort<Float> { port(named: "outputSampleRate") }
+    public var outputDroppedSamples: NodePort<Int> { port(named: "outputDroppedSamples") }
     public var outputWaveformHistory: NodePort<ContiguousArray<Float>> { port(named: "outputWaveformHistory") }
 
     public required init(context: Context)
@@ -134,7 +143,9 @@ public final class LiveAudioAnalysisNode: Node
     {
         analysisStore.setEnabled(inputEnabled.value ?? true)
         analysisStore.beginCaptureIfNeeded()
-        let state = analysisStore.takeStateForGraphPass()
+        let waveformOutput = outputWaveformHistory
+        let needsWaveformHistory = waveformOutput.published || !waveformOutput.connectedInlets.isEmpty
+        let state = analysisStore.takeStateForGraphPass(includeWaveformRows: needsWaveformHistory)
         let publication = PublishedState(
             generation: state.generation,
             revision: state.revision,
@@ -145,10 +156,24 @@ public final class LiveAudioAnalysisNode: Node
             AudioAnalysisPortLayout.publish(state.snapshot, from: self)
             outputRunning.send(state.isRunning)
             outputSampleRate.send(state.sampleRate)
-            outputWaveformHistory.send(
-                AudioWaveformRow.flattenedHistory(state.waveformRows[...])
-            )
+            outputDroppedSamples.send(state.droppedSampleCount)
             lastPublishedState = publication
+        }
+        if needsWaveformHistory
+        {
+            let waveformPublication = WaveformPublication(
+                generation: state.generation,
+                frameIndex: state.snapshot?.frameIndex
+            )
+            if lastPublishedWaveform != waveformPublication
+            {
+                waveformOutput.send(AudioWaveformRow.flattenedHistory(state.waveformRows[...]))
+                lastPublishedWaveform = waveformPublication
+            }
+        }
+        else
+        {
+            lastPublishedWaveform = nil
         }
         if let errorDescription = state.errorDescription
         {

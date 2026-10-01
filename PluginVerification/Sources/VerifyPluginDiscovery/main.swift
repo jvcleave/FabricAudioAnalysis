@@ -15,11 +15,76 @@ private enum VerificationError: Error
     case graphRoundTripFailed
     case boxScaleFailed
     case boxColorFailed(String)
+    case captureOutputFailed
 }
 
 let restingBoxColor = simd_float4(1, 1, 1, 1)
 let onsetBoxColor = simd_float4(1, 0, 0, 1)
 let onsetFlashDuration: Float = 0.2
+
+func verifyCaptureOutputs(in graph: Graph, sourceNode: Node, context: Context, device: MTLDevice) throws
+{
+    let microphoneEnabled: ParameterPort<Bool> = sourceNode.port(named: "inputEnabled")
+    microphoneEnabled.value = false
+    let waveform: NodePort<ContiguousArray<Float>> = sourceNode.port(named: "outputWaveformHistory")
+    let droppedSamples: NodePort<Int> = sourceNode.port(named: "outputDroppedSamples")
+    guard let commandQueue = device.makeCommandQueue(), waveform.value == nil else
+    {
+        throw VerificationError.captureOutputFailed
+    }
+    let renderer = GraphRenderer(context: context, graph: graph)
+    try renderer.startExecution()
+    defer { renderer.teardown() }
+
+    func executeGraphPass(for node: Node) throws
+    {
+        guard let commandBuffer = commandQueue.makeCommandBuffer() else
+        {
+            throw VerificationError.noCommandBuffer
+        }
+        try renderer.execute(
+            graph: graph,
+            executionInfo: renderer.currentExecutionInfo,
+            renderPassDescriptor: MTLRenderPassDescriptor(),
+            commandBuffer: commandBuffer,
+            forceEvaluationForTheseNodes: [node]
+        )
+    }
+
+    try executeGraphPass(for: sourceNode)
+    guard waveform.value == nil, droppedSamples.value == 0 else
+    {
+        throw VerificationError.captureOutputFailed
+    }
+
+    waveform.published = true
+    graph.rebuildPublishedParameterGroup()
+    try executeGraphPass(for: sourceNode)
+    guard waveform.value?.count == 24 * 192,
+          waveform.value?.allSatisfy({ $0 == 0 }) == true
+    else
+    {
+        throw VerificationError.captureOutputFailed
+    }
+
+    waveform.published = false
+    graph.rebuildPublishedParameterGroup()
+    try executeGraphPass(for: sourceNode)
+    let waveformSink = SampleAndHoldNode(context: context, portType: .Array(portType: .Float))
+    graph.addNode(waveformSink)
+    let waveformInput: NodePort<ContiguousArray<Float>> = waveformSink.port(named: "inputValue")
+    guard graph.connect(waveform, to: waveformInput) != nil else
+    {
+        throw VerificationError.connectionFailed
+    }
+    try executeGraphPass(for: waveformSink)
+    guard waveformInput.value == waveform.value, waveformInput.value?.count == 24 * 192 else
+    {
+        throw VerificationError.captureOutputFailed
+    }
+    print("Verified unused waveform output stays empty, while published and connected outputs receive history")
+    print("Verified Dropped Samples initializes to zero without microphone capture")
+}
 
 func verifyBoxResponse(in graph: Graph, context: Context, device: MTLDevice) throws
 {
@@ -109,6 +174,33 @@ func verifyBoxResponse(in graph: Graph, context: Context, device: MTLDevice) thr
         throw VerificationError.boxColorFailed("released onset: actual color=\(materialNode.material.color), input color=\(String(describing: materialNode.inputColor.value))")
     }
     print("Verified an onset flashes the box red for 0.2 seconds before returning to white")
+
+    if CommandLine.arguments.contains("--measure-box")
+    {
+        let clock = ContinuousClock()
+        var executionMilliseconds: [Double] = []
+        executionMilliseconds.reserveCapacity(1000)
+        for frameIndex in 0 ..< 1200
+        {
+            envelope.send(Float(frameIndex % 101) / 100, force: true)
+            onset.send(frameIndex % 30 == 0, force: true)
+            let start = clock.now
+            try executeGraphPass(at: 0.3 + Double(frameIndex) / 60)
+            if frameIndex >= 200
+            {
+                let duration = start.duration(to: clock.now).components
+                executionMilliseconds.append(
+                    Double(duration.seconds) * 1000 + Double(duration.attoseconds) / 1e15
+                )
+            }
+        }
+        executionMilliseconds.sort()
+        let median = executionMilliseconds[executionMilliseconds.count / 2]
+        let percentile95 = executionMilliseconds[executionMilliseconds.count * 95 / 100]
+        let precision = FloatingPointFormatStyle<Double>.number.precision(.fractionLength(3))
+        print("Synthetic box graph CPU pass: median \(median.formatted(precision)) ms, p95 \(percentile95.formatted(precision)) ms across 1000 passes")
+        print("Timing excludes microphone capture, FFT, drawing, and GPU completion")
+    }
 }
 
 let pluginID = "com.jvclabs.FabricAudioAnalysis"
@@ -166,6 +258,7 @@ else
     throw VerificationError.graphRoundTripFailed
 }
 print("Saved and reopened Live Audio Analysis with a typed connection")
+try verifyCaptureOutputs(in: graph, sourceNode: liveNode, context: context, device: device)
 
 let existingSceneDirectory = URL(
     fileURLWithPath: FileManager.default.currentDirectoryPath,

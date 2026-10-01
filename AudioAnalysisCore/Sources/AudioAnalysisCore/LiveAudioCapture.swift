@@ -1,5 +1,6 @@
 @preconcurrency import AVFoundation
 import Foundation
+import Synchronization
 
 public enum LiveAudioCaptureError: LocalizedError
 {
@@ -128,6 +129,7 @@ public final class LiveAudioCapture
     /// A single task drains the bounded ring. The audio callback schedules no
     /// work, and this loop checks cancellation between small processing batches.
     public func run(
+        onDroppedSampleCount: @escaping @Sendable (Int) -> Void = { _ in },
         onFrame: @escaping @Sendable (LiveAudioCapturedFrame) -> Void
     ) async throws
     {
@@ -141,6 +143,7 @@ public final class LiveAudioCapture
         let processor = try LiveAudioFrameProcessor()
         var pendingSamples: [Float] = []
         var consumedSampleCount = 0
+        var lastReportedDroppedSampleCount = 0
         let requiredSamples = max(hopSize, AudioFrameAnalyzer.fftSize)
 
         while true
@@ -171,6 +174,12 @@ public final class LiveAudioCapture
                 try Task.checkCancellation()
             }
 
+            let droppedSampleCount = sampleRing.droppedSampleCount
+            if droppedSampleCount != lastReportedDroppedSampleCount
+            {
+                onDroppedSampleCount(droppedSampleCount)
+                lastReportedDroppedSampleCount = droppedSampleCount
+            }
             try await Task.sleep(for: .milliseconds(10))
         }
     }
@@ -197,26 +206,38 @@ public final class LiveAudioCapture
 /// the consumer falls behind. It never blocks the audio callback on a lock.
 final class LiveAudioSampleRing: @unchecked Sendable
 {
-    private let lock = NSLock()
+    private let lock: NSLock
+    private let droppedSamples = Atomic<Int>(0)
     private var samples: [Float]
     private var readIndex = 0
     private var writeIndex = 0
     private var availableCount = 0
 
-    init(capacity: Int)
+    init(capacity: Int, lock: NSLock = NSLock())
     {
         precondition(capacity > 0)
+        self.lock = lock
         samples = [Float](repeating: 0, count: capacity)
+    }
+
+    var droppedSampleCount: Int
+    {
+        droppedSamples.load(ordering: .relaxed)
     }
 
     func append(_ buffer: AVAudioPCMBuffer)
     {
-        guard lock.try() else { return }
+        guard lock.try() else
+        {
+            droppedSamples.wrappingAdd(Int(buffer.frameLength), ordering: .relaxed)
+            return
+        }
         defer { lock.unlock() }
         guard let channels = buffer.floatChannelData else { return }
         let frameCount = Int(buffer.frameLength)
         let channelCount = Int(buffer.format.channelCount)
         guard channelCount > 0 else { return }
+        var overwrittenSampleCount = 0
 
         for frameIndex in 0 ..< frameCount
         {
@@ -230,11 +251,16 @@ final class LiveAudioSampleRing: @unchecked Sendable
             if availableCount == samples.count
             {
                 readIndex = (readIndex + 1) % samples.count
+                overwrittenSampleCount += 1
             }
             else
             {
                 availableCount += 1
             }
+        }
+        if overwrittenSampleCount > 0
+        {
+            droppedSamples.wrappingAdd(overwrittenSampleCount, ordering: .relaxed)
         }
     }
 

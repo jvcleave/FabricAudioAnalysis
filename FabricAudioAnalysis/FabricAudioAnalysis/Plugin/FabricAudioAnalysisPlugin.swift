@@ -17,6 +17,7 @@ public final class FabricAudioAnalysisPlugin: NSObject, FabricPlugin
     {
         [
             LiveAudioAnalysisNode.self,
+            WaveformTrailNode.self,
         ]
     }
 }

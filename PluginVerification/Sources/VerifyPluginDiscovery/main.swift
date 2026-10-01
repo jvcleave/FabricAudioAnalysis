@@ -218,11 +218,12 @@ guard let liveNodeClass = registry.nodeClass(pluginID: pluginID, nodeID: "LiveAu
     throw VerificationError.missingNode("LiveAudioAnalysisNode")
 }
 let pluginNodes = registry.availableNodes.filter { $0.pluginBundleID == pluginID }
-guard pluginNodes.count == 1 else
+guard pluginNodes.count == 2,
+      registry.nodeClass(pluginID: pluginID, nodeID: "WaveformTrailNode") != nil else
 {
     throw VerificationError.unexpectedNode(pluginNodes.map(\.nodeName).joined(separator: ", "))
 }
-print("Discovered Live Audio Analysis as the plugin's only node")
+print("Discovered Live Audio Analysis and Waveform Trail")
 
 guard let device = MTLCreateSystemDefaultDevice() else
 {
@@ -388,4 +389,29 @@ if CommandLine.arguments.contains("--write-samples")
     }
     try verifyBoxResponse(in: reopenedSample, context: context, device: device)
     print("Wrote \(fileName)")
+}
+
+let advancedSceneURL = existingSceneDirectory.appending(path: "LiveAudioAnalysisAdvanced.fabric")
+if CommandLine.arguments.contains("--write-advanced")
+{
+    let advancedScene = try AdvancedSceneBuilder(context: context, registry: registry, sourceClass: liveNodeClass).build()
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+    try encoder.encode(advancedScene).write(to: advancedSceneURL)
+    print("Wrote LiveAudioAnalysisAdvanced.fabric")
+}
+if FileManager.default.fileExists(atPath: advancedSceneURL.path)
+{
+    let decoder = JSONDecoder()
+    decoder.context = DecoderContext(documentContext: context)
+    let advancedScene = try decoder.decode(Graph.self, from: Data(contentsOf: advancedSceneURL))
+    let reopenedScene = try decoder.decode(Graph.self, from: JSONEncoder().encode(advancedScene))
+    guard Set(sceneNodes(in: advancedScene).map(\.id)) == Set(sceneNodes(in: reopenedScene).map(\.id)),
+          sceneConnectionIDs(in: advancedScene) == sceneConnectionIDs(in: reopenedScene) else
+    {
+        throw VerificationError.graphRoundTripFailed
+    }
+    let previewURL = CommandLine.arguments.contains("--write-advanced") || CommandLine.arguments.contains("--preview-advanced")
+        ? existingSceneDirectory.appending(path: "LiveAudioAnalysisAdvanced-preview.png") : nil
+    try verifyAdvancedScene(reopenedScene, context: context, previewURL: previewURL)
 }

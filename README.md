@@ -1,7 +1,8 @@
 # Fabric Audio Analysis
 
 A Fabric plug-in for live microphone analysis. It registers **Live Audio Analysis**
-with stable, typed ports for driving audio-reactive graphs. The behavior and
+with stable, typed ports for driving audio-reactive graphs, and **Waveform Trail**
+for drawing supplied waveform history and onset pulses. The behavior and
 acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
 
 ## Current state
@@ -41,6 +42,12 @@ Medium Envelope plus 0.35 to scale a rendered box uniformly. The box stays
 visible during silence and grows as the envelope rises. Onset flashes the
 box red for at least 0.2 seconds before returning to white.
 
+The [advanced example](FabricScenes/README.md#advanced-scene) uses all 21 outputs
+from one microphone source. Six named subgraphs organize a waveform and onset
+trail, five frequency meters, three envelope rings, RMS and flux peak meters,
+background brightness, and capture readouts. Most visuals use Fabric's existing
+nodes; Waveform Trail handles the layered waveform and scrolling hit markers.
+
 ## Node port reference
 
 All normalized values are in `0...1`. RMS, frequency bands, and spectral flux
@@ -77,6 +84,33 @@ use a rolling 180-frame maximum. Loudness Normalized uses a fixed
 | Sample Rate | Output | Float | 0 before capture | Input sample rate in Hz |
 | Dropped Samples | Output | Index (Int) | 0 before capture | Cumulative mono samples lost to ring overflow or lock contention in the current capture generation |
 
+### Waveform Trail
+
+This image generator uses supplied analysis; it does not capture or analyze
+audio. It draws up to eight layers from the newest 24 waveform rows, with older
+layers receding behind the current waveform. Each onset flashes the center
+playhead red for 0.2 seconds and adds a marker that travels toward the left edge
+over Trail Duration. Marker motion follows scene time, including graph passes
+between analysis frames. Restarting or rewinding the scene clears the markers.
+
+| Port | Direction | Fabric type | Default | Description |
+| --- | --- | --- | --- | --- |
+| Waveform History | Input | Array of Float | Empty | Signed samples grouped into oldest-to-newest rows of 192; a single row also works |
+| Onset | Input | Bool | false | A hit pulse for the current graph pass |
+| Intensity | Input | Float | 1 | Strength of each new onset marker, normally driven by Spectral Flux |
+| Color | Input | Color | Cyan | Waveform tint |
+| Amplitude | Input | Float | 0.25 | Waveform height relative to the image |
+| Thickness | Input | Float | 0.004 | Line width relative to the image height |
+| Glow | Input | Float | 1.4 | Glow strength |
+| Trail Duration | Input | Float | 4 | Seconds for an onset to travel from center to left edge |
+| Width | Input | Index (Int) | 1280 | Output width, clamped to 64...4096 pixels |
+| Height | Input | Index (Int) | 320 | Output height, clamped to 32...2048 pixels |
+| Image | Output | Image | — | An opaque RGBA image with a dark grid background |
+
+Onset history is bounded to 512 markers. Three reusable upload buffers keep
+CPU writes separate from submitted GPU work. If all buffers are still in use,
+the node keeps its previous image instead of waiting for the GPU.
+
 Run the focused core checks with:
 
 ```sh
@@ -108,7 +142,8 @@ same Live Audio Analysis node name, so installing both causes a registration
 conflict. This plug-in uses the identifier `com.jvclabs.FabricAudioAnalysis`.
 
 After building, check registration, graph save/reopen, waveform demand,
-uniform box scaling, and onset color flashes through Fabric's own `NodeRegistry`:
+uniform box scaling, onset color flashes, and the advanced scene through Fabric's
+own `NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh
@@ -122,6 +157,13 @@ accepts `FABRIC_SPM_SCRATCH_PATH` to reuse an existing compatible Fabric build.
 The box check disables microphone capture and supplies envelope and onset
 values, so it can verify scaling and the red flash without requesting
 microphone access.
+
+The advanced check also disables capture, supplies synthetic values to all 21
+outputs, and renders the saved scene through Metal. It checks the nested graph
+connections, meter and peak positions, capture text, and onset flash release.
+Use `--preview-advanced` to export that synthetic render, or `--write-advanced`
+to regenerate only the advanced scene and its preview. The basic example is
+not rewritten by either option.
 
 Pass `--measure-box` to the verification script for a synthetic CPU timing
 sample of the saved graph. It warms up for 200 passes, then reports median

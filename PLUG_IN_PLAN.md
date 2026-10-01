@@ -18,6 +18,11 @@ bounded waveform history, and microphone capture. It has no Fabric or Satin
 dependency. The `.fabricplugin` target owns node registration, typed ports,
 Codable settings, lifecycle integration, and graph publishing.
 
+Waveform Trail owns the Metal drawing of supplied waveform history and a
+bounded, scene-time onset trail. It does not create a capture engine or an FFT
+analyzer. The advanced example combines it with existing Fabric nodes and keeps
+one Live Audio Analysis source for the entire scene.
+
 The Xcode target builds against the adjacent `../Fabric` checkout by default
 and accepts `FABRIC_SOURCE_ROOT` for another checkout. It builds the matching
 Debug or Release Fabric module, links against the host implementation without
@@ -60,7 +65,7 @@ drops without waiting for a lock in the audio callback.
 
 ## Verification and completion criteria
 
-- Fabric discovers exactly one plug-in node: Live Audio Analysis.
+- Fabric discovers two plug-in nodes: Live Audio Analysis and Waveform Trail.
 - Typed node connections survive graph save and reopen.
 - Core checks cover silence, known-frequency signals, onset behavior, finite
   normalized values, waveform history, and bounded capture handoff.
@@ -76,3 +81,9 @@ drops without waiting for a lock in the audio callback.
   verify microphone access, live box scaling, and onset flashes.
 - The README documents normalization, the default microphone limitation,
   installation, and the Fabric revision used for verification.
+- `LiveAudioAnalysisAdvanced.fabric` uses all 21 source outputs across six named
+  subgraphs, and nested node identities and connections survive save/reopen.
+  Synthetic input verifies meters, peak positions, raw and capture readouts,
+  onset flashes, and Metal waveform rendering without microphone access.
+- Onset trail checks cover bounded storage, scene-time scrolling and expiry,
+  repeated evaluations at the same timestamp, and reset after a rewind.

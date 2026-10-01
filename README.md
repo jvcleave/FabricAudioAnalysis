@@ -1,9 +1,19 @@
 # Fabric Audio Analysis
 
-A Fabric plug-in for live microphone analysis. It registers **Live Audio Analysis**
+A [Fabric](https://github.com/Fabric-Project/Fabric) plug-in for live microphone
+analysis. It registers **Live Audio Analysis**
 with stable, typed ports for driving audio-reactive graphs, and **Waveform Trail**
 for drawing supplied waveform history and onset pulses. The behavior and
 acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
+
+## Fabric version
+
+Developed and verified against **Fabric 0.1 (build 15)** from a development source
+checkout at commit
+[940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e](https://github.com/Fabric-Project/Fabric/commit/940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e)
+(September 29, 2026). The version and build number come from that checkout's
+Xcode project; the commit identifies the exact Fabric source used for plugin
+builds, discovery, scene save/reopen, and advanced-scene GPU verification.
 
 ## Current state
 
@@ -138,10 +148,8 @@ xcodebuild \
 The target builds the adjacent `../Fabric` checkout in an isolated
 `.fabric-spm` directory and installs an ad-hoc signed copy in
 `~/Library/Application Support/Fabric/Plugins/`. To use a different checkout,
-pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The renamed
-Debug bundle, discovery, scene save/reopen, and box scaling were verified
-against the adjacent Fabric checkout at
-`940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e`.
+pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. See
+[Fabric version](#fabric-version) for the development target used for verification.
 
 When replacing an earlier development bundle, move it out of Fabric's
 `Plugins` directory before running the new plug-in. Both bundles register the

@@ -1,9 +1,9 @@
-import AudioSourceProcessorCore
+import AudioAnalysisCore
 import Fabric
 import Foundation
 
 /// Entry point discovered by Fabric when the development bundle loads.
-public final class FabricAudioSourceProcessorPlugin: NSObject, FabricPlugin
+public final class FabricAudioAnalysisPlugin: NSObject, FabricPlugin
 {
     public static func pluginDidLoad(bundle: Bundle)
     {

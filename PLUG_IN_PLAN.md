@@ -1,4 +1,4 @@
-# Fabric Audio Source Processor — plug-in plan
+# Fabric Audio Analysis — plug-in plan
 
 ## Goal and starting point
 
@@ -13,7 +13,7 @@ Accelerate. No additional third-party framework is required.
 
 ## Responsibilities
 
-`AudioSourceProcessorCore` owns DSP, immutable `Sendable` analysis snapshots,
+`AudioAnalysisCore` owns DSP, immutable `Sendable` analysis snapshots,
 bounded waveform history, and microphone capture. It has no Fabric or Satin
 dependency. The `.fabricplugin` target owns node registration, typed ports,
 Codable settings, lifecycle integration, and graph publishing.
@@ -61,8 +61,9 @@ error. Preserve the newest measurements when no new snapshot is available.
   normalized values, waveform history, and bounded capture handoff.
 - The Debug bundle builds against the selected Fabric checkout and passes
   installed-bundle discovery checks.
-- `LiveAudioAnalysis.fabric` and `AudioDepthBlocksLive.fabric` reopen with their
-  connections intact. Run them in Fabric Editor to verify microphone access
-  and reactive visuals.
+- `LiveAudioAnalysis.fabric` reopens with its connections intact and remains
+  visible at a uniform scale of 0.35 during silence. A supplied envelope of
+  0.65 changes all scale components to 1.0. Run it in Fabric Editor to verify
+  microphone access and live box scaling.
 - The README documents normalization, the default microphone limitation,
   installation, and the Fabric revision used for verification.

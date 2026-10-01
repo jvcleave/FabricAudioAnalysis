@@ -1,4 +1,4 @@
-# Fabric Audio Source Processor
+# Fabric Audio Analysis
 
 A Fabric plug-in for live microphone analysis. It registers **Live Audio Analysis**
 with stable, typed ports for driving audio-reactive graphs. The behavior and
@@ -6,7 +6,7 @@ acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
 
 ## Current state
 
-`AudioSourceProcessorCore` is a Swift 5.9, macOS 15+ package with no Fabric
+`AudioAnalysisCore` is a Swift 5.9, macOS 15+ package with no Fabric
 dependency. It defines immutable analysis values, a 2048-point FFT frame
 analyzer, a streaming onset detector, and microphone capture. The analyzer
 emits raw RMS, loudness, five frequency-band energies, spectral flux, spectral
@@ -29,11 +29,9 @@ microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric Editor
 does so already.
 
-Two example graphs are in [FabricScenes](FabricScenes/README.md).
-`LiveAudioAnalysis.fabric` uses Medium Envelope to scale a rendered box.
-`AudioDepthBlocksLive.fabric` uses Waveform History to scale 288 instanced boxes
-independently; Medium Envelope amplifies their depth, and Onset briefly changes
-their color. Both use existing Fabric nodes for the visuals.
+The [box-scaling example](FabricScenes/README.md) uses Live Audio Analysis's
+Medium Envelope plus 0.35 to scale a rendered box uniformly. The box stays
+visible during silence and grows as the envelope rises.
 
 ## Node port reference
 
@@ -73,15 +71,15 @@ use a rolling 180-frame maximum. Loudness Normalized uses a fixed
 Run the focused core checks with:
 
 ```sh
-swift test --package-path AudioSourceProcessorCore
+swift test --package-path AudioAnalysisCore
 ```
 
 Build and install the development bundle from this repository root:
 
 ```sh
 xcodebuild \
-  -project FabricAudioSourceProcessor/FabricAudioSourceProcessor.xcodeproj \
-  -scheme FabricAudioSourceProcessor \
+  -project FabricAudioAnalysis/FabricAudioAnalysis.xcodeproj \
+  -scheme FabricAudioAnalysis \
   -configuration Debug \
   -destination 'platform=macOS' \
   build
@@ -90,13 +88,18 @@ xcodebuild \
 The target builds the adjacent `../Fabric` checkout in an isolated
 `.fabric-spm` directory and installs an ad-hoc signed copy in
 `~/Library/Application Support/Fabric/Plugins/`. To use a different checkout,
-pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The first
-verified bundle build used Fabric `69b8a580a1ef79f5c8a9b150b5d3483193c541ac`.
-The live-only Debug bundle and discovery checks were verified against the
-adjacent Fabric checkout at `940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e`.
+pass `FABRIC_SOURCE_ROOT=/absolute/path/to/Fabric` to `xcodebuild`. The renamed
+Debug bundle, discovery, scene save/reopen, and box scaling were verified
+against the adjacent Fabric checkout at
+`940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e`.
 
-After building, check registration and graph save/reopen through Fabric's own
-`NodeRegistry`:
+When replacing an earlier development bundle, move it out of Fabric's
+`Plugins` directory before running the new plug-in. Both bundles register the
+same Live Audio Analysis node name, so installing both causes a registration
+conflict. This plug-in uses the identifier `com.jvclabs.FabricAudioAnalysis`.
+
+After building, check registration, graph save/reopen, and uniform box scaling
+through Fabric's own `NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh
@@ -105,7 +108,10 @@ sh PluginVerification/verify.sh
 `PluginVerification/Package.resolved` matches the selected Fabric checkout's
 package lock. Refresh it from that checkout when updating the host revision.
 The verification script prepares a local Sparkle copy needed by Fabric's
-command-line host executable; it does not change the Fabric checkout.
+command-line host executable; it does not change the Fabric checkout. It also
+accepts `FABRIC_SPM_SCRATCH_PATH` to reuse an existing compatible Fabric build.
+The box check disables microphone capture and supplies an envelope value, so
+it can verify the saved scene without requesting microphone access.
 
 Restart Fabric Editor after updating the installed bundle; its registry loads
 external plug-ins at startup.

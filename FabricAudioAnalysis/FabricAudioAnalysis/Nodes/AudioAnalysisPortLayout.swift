@@ -1,4 +1,4 @@
-import AudioSourceProcessorCore
+import AudioAnalysisCore
 import Fabric
 
 /// Stable outlet keys for live microphone analysis.

@@ -1,4 +1,4 @@
-@testable import AudioSourceProcessorCore
+@testable import AudioAnalysisCore
 import AVFoundation
 import XCTest
 

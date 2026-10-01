@@ -3,7 +3,7 @@ set -eu
 
 repository_root=$(cd "$(dirname "$0")/.." && pwd)
 fabric_source_root="$repository_root/../Fabric"
-scratch_path="$repository_root/.fabric-spm"
+scratch_path="${FABRIC_SPM_SCRATCH_PATH:-$repository_root/.fabric-spm}"
 build_products="$scratch_path/$(uname -m)-apple-macosx/debug"
 
 if ! cmp -s "$fabric_source_root/Package.resolved" "$repository_root/PluginVerification/Package.resolved"; then

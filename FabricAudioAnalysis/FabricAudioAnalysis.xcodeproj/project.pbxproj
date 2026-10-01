@@ -7,30 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		B0D100000000000000000005 /* AudioSourceProcessorCore in Frameworks */ = {isa = PBXBuildFile; productRef = B0D100000000000000000007 /* AudioSourceProcessorCore */; };
+		B0D100000000000000000005 /* AudioAnalysisCore in Frameworks */ = {isa = PBXBuildFile; productRef = B0D100000000000000000007 /* AudioAnalysisCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		035DF3B1304CC1940090D775 /* FabricAudioSourceProcessor.fabricplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FabricAudioSourceProcessor.fabricplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		035DF3B1304CC1940090D775 /* FabricAudioAnalysis.fabricplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FabricAudioAnalysis.fabricplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		B0D100000000000000000001 /* Exceptions for "FabricAudioSourceProcessor" folder in "FabricAudioSourceProcessor" target */ = {
+		B0D100000000000000000001 /* Exceptions for "FabricAudioAnalysis" folder in "FabricAudioAnalysis" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 035DF3B0304CC1940090D775 /* FabricAudioSourceProcessor */;
+			target = 035DF3B0304CC1940090D775 /* FabricAudioAnalysis */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		B0D100000000000000000002 /* FabricAudioSourceProcessor */ = {
+		B0D100000000000000000002 /* FabricAudioAnalysis */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				B0D100000000000000000001 /* Exceptions for "FabricAudioSourceProcessor" folder in "FabricAudioSourceProcessor" target */,
+				B0D100000000000000000001 /* Exceptions for "FabricAudioAnalysis" folder in "FabricAudioAnalysis" target */,
 			);
-			path = FabricAudioSourceProcessor;
+			path = FabricAudioAnalysis;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -40,7 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B0D100000000000000000005 /* AudioSourceProcessorCore in Frameworks */,
+				B0D100000000000000000005 /* AudioAnalysisCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,7 +50,7 @@
 		035DF3A8304CC1940090D775 = {
 			isa = PBXGroup;
 			children = (
-				B0D100000000000000000002 /* FabricAudioSourceProcessor */,
+				B0D100000000000000000002 /* FabricAudioAnalysis */,
 				035DF3B2304CC1940090D775 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -58,7 +58,7 @@
 		035DF3B2304CC1940090D775 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				035DF3B1304CC1940090D775 /* FabricAudioSourceProcessor.fabricplugin */,
+				035DF3B1304CC1940090D775 /* FabricAudioAnalysis.fabricplugin */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,9 +66,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		035DF3B0304CC1940090D775 /* FabricAudioSourceProcessor */ = {
+		035DF3B0304CC1940090D775 /* FabricAudioAnalysis */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 035DF3B5304CC1940090D775 /* Build configuration list for PBXNativeTarget "FabricAudioSourceProcessor" */;
+			buildConfigurationList = 035DF3B5304CC1940090D775 /* Build configuration list for PBXNativeTarget "FabricAudioAnalysis" */;
 			buildPhases = (
 				B0D100000000000000000003 /* Prepare Fabric API */,
 				035DF3AD304CC1940090D775 /* Sources */,
@@ -81,14 +81,14 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				B0D100000000000000000002 /* FabricAudioSourceProcessor */,
+				B0D100000000000000000002 /* FabricAudioAnalysis */,
 			);
-			name = FabricAudioSourceProcessor;
+			name = FabricAudioAnalysis;
 			packageProductDependencies = (
-				B0D100000000000000000007 /* AudioSourceProcessorCore */,
+				B0D100000000000000000007 /* AudioAnalysisCore */,
 			);
-			productName = FabricAudioSourceProcessor;
-			productReference = 035DF3B1304CC1940090D775 /* FabricAudioSourceProcessor.fabricplugin */;
+			productName = FabricAudioAnalysis;
+			productReference = 035DF3B1304CC1940090D775 /* FabricAudioAnalysis.fabricplugin */;
 			productType = "com.apple.product-type.bundle";
 		};
 /* End PBXNativeTarget section */
@@ -105,7 +105,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 035DF3AC304CC1940090D775 /* Build configuration list for PBXProject "FabricAudioSourceProcessor" */;
+			buildConfigurationList = 035DF3AC304CC1940090D775 /* Build configuration list for PBXProject "FabricAudioAnalysis" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -115,14 +115,14 @@
 			mainGroup = 035DF3A8304CC1940090D775;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				B0D100000000000000000006 /* XCLocalSwiftPackageReference "../AudioSourceProcessorCore" */,
+				B0D100000000000000000006 /* XCLocalSwiftPackageReference "../AudioAnalysisCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 035DF3B2304CC1940090D775 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				035DF3B0304CC1940090D775 /* FabricAudioSourceProcessor */,
+				035DF3B0304CC1940090D775 /* FabricAudioAnalysis */,
 			);
 		};
 /* End PBXProject section */
@@ -322,7 +322,7 @@
 					"$(FABRIC_SPM_BUILD_ROOT)",
 				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FabricAudioSourceProcessor/Info.plist;
+				INFOPLIST_FILE = FabricAudioAnalysis/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -423,8 +423,8 @@
 					-Xcc,
 					"$(FABRIC_SPM_SCRATCH_PATH)/checkouts/CocoaAsyncSocket/Source/GCD",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jvclabs.FabricAudioSourceProcessor;
-				PRODUCT_MODULE_NAME = FabricAudioSourceProcessor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jvclabs.FabricAudioAnalysis;
+				PRODUCT_MODULE_NAME = FabricAudioAnalysis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -456,7 +456,7 @@
 					"$(FABRIC_SPM_BUILD_ROOT)",
 				);
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = FabricAudioSourceProcessor/Info.plist;
+				INFOPLIST_FILE = FabricAudioAnalysis/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -557,8 +557,8 @@
 					-Xcc,
 					"$(FABRIC_SPM_SCRATCH_PATH)/checkouts/CocoaAsyncSocket/Source/GCD",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.jvclabs.FabricAudioSourceProcessor;
-				PRODUCT_MODULE_NAME = FabricAudioSourceProcessor;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jvclabs.FabricAudioAnalysis;
+				PRODUCT_MODULE_NAME = FabricAudioAnalysis;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -577,7 +577,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		035DF3AC304CC1940090D775 /* Build configuration list for PBXProject "FabricAudioSourceProcessor" */ = {
+		035DF3AC304CC1940090D775 /* Build configuration list for PBXProject "FabricAudioAnalysis" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				035DF3B3304CC1940090D775 /* Debug */,
@@ -586,7 +586,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		035DF3B5304CC1940090D775 /* Build configuration list for PBXNativeTarget "FabricAudioSourceProcessor" */ = {
+		035DF3B5304CC1940090D775 /* Build configuration list for PBXNativeTarget "FabricAudioAnalysis" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				035DF3B6304CC1940090D775 /* Debug */,
@@ -598,16 +598,16 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		B0D100000000000000000006 /* XCLocalSwiftPackageReference "../AudioSourceProcessorCore" */ = {
+		B0D100000000000000000006 /* XCLocalSwiftPackageReference "../AudioAnalysisCore" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = "../AudioSourceProcessorCore";
+			relativePath = "../AudioAnalysisCore";
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		B0D100000000000000000007 /* AudioSourceProcessorCore */ = {
+		B0D100000000000000000007 /* AudioAnalysisCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = AudioSourceProcessorCore;
+			productName = AudioAnalysisCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

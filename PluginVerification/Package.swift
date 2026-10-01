@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "FabricAudioSourceProcessorVerification",
+    name: "FabricAudioAnalysisVerification",
     platforms: [.macOS(.v15)],
     dependencies: [.package(path: "../../Fabric")],
     targets: [

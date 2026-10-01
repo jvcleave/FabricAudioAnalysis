@@ -1,4 +1,4 @@
-import AudioSourceProcessorCore
+import AudioAnalysisCore
 import Foundation
 
 /// Owns one capture generation and hands the newest completed frame to Fabric.

@@ -1,6 +1,6 @@
 .DS_Store
 .build/
-AudioSourceProcessorCore/.build/
+AudioAnalysisCore/.build/
 DerivedData/
 .fabric-spm/
 *.xcuserstate

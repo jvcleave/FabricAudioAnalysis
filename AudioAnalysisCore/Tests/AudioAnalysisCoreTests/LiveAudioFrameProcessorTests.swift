@@ -1,4 +1,4 @@
-import AudioSourceProcessorCore
+import AudioAnalysisCore
 import XCTest
 
 final class LiveAudioFrameProcessorTests: XCTestCase

@@ -6,7 +6,7 @@
   },
   "requiredPlugins" : [
     {
-      "id" : "com.jvclabs.FabricAudioSourceProcessor",
+      "id" : "com.jvclabs.FabricAudioAnalysis",
       "version" : "1.0"
     },
     {
@@ -341,7 +341,7 @@
           "analysisFramesPerSecond" : 30
         }
       },
-      "type" : "com.jvclabs.FabricAudioSourceProcessor\/LiveAudioAnalysisNode"
+      "type" : "com.jvclabs.FabricAudioAnalysis\/LiveAudioAnalysisNode"
     },
     {
       "value" : {
@@ -993,7 +993,7 @@
                   "base" : {
                     "description" : "When enabled, the object is rendered in the scene",
                     "label" : "Visible",
-                    "value" : false,
+                    "value" : true,
                     "defaultValue" : true,
                     "controlType" : "button",
                     "id" : "AB6E6ABC-6CD7-475A-9AD2-B8062255171D"
@@ -1360,12 +1360,6 @@
       "id" : "9875437E-0C03-49DF-8316-6DBCA6AEBE7B",
       "outletPortID" : "339D1606-F97D-4DE9-8527-13376EDD93DA",
       "inletPortID" : "1F7036D7-CDA4-4F75-9A47-0B12A82383B9",
-      "active" : true
-    },
-    {
-      "id" : "BC207A82-6F6B-4DB0-A924-1EE58990938F",
-      "outletPortID" : "79400B83-38C0-4E74-9D10-2FD3530C8B54",
-      "inletPortID" : "AB6E6ABC-6CD7-475A-9AD2-B8062255171D",
       "active" : true
     }
   ],

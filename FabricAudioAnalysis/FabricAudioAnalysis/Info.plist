@@ -23,8 +23,8 @@
 	<key>FabricPluginDescription</key>
 	<string>Live-microphone analysis for Fabric.</string>
 	<key>FabricPluginDisplayName</key>
-	<string>Fabric Audio Source Processor</string>
+	<string>Fabric Audio Analysis</string>
 	<key>NSPrincipalClass</key>
-	<string>$(PRODUCT_MODULE_NAME).FabricAudioSourceProcessorPlugin</string>
+	<string>$(PRODUCT_MODULE_NAME).FabricAudioAnalysisPlugin</string>
 </dict>
 </plist>

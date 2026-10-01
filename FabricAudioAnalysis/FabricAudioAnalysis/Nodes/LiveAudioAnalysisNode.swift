@@ -5,12 +5,6 @@ import Metal
 import Satin
 import SwiftUI
 
-private struct LiveAudioAnalysisNodeError: LocalizedError
-{
-    let message: String
-    var errorDescription: String? { message }
-}
-
 public final class LiveAudioAnalysisNode: Node
 {
     public override class var name: String { "Live Audio Analysis" }
@@ -177,7 +171,7 @@ public final class LiveAudioAnalysisNode: Node
         }
         if let errorDescription = state.errorDescription
         {
-            throw LiveAudioAnalysisNodeError(message: errorDescription)
+            throw FabricError(.execution(.failed), severity: .recoverable, message: errorDescription)
         }
     }
 }

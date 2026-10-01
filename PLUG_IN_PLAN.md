@@ -87,3 +87,7 @@ drops without waiting for a lock in the audio callback.
   onset flashes, and Metal waveform rendering without microphone access.
 - Onset trail checks cover bounded storage, scene-time scrolling and expiry,
   repeated evaluations at the same timestamp, and reset after a rewind.
+- Invalid onset and audio-buffer capacities throw errors instead of terminating
+  the process. FFT buffer failures propagate through capture as recoverable
+  Fabric execution errors. Nonpositive audio-buffer read sizes leave pending
+  samples intact and return an empty result.

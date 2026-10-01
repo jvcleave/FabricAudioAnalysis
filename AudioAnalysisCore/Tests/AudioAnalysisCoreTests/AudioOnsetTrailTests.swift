@@ -22,9 +22,9 @@ final class AudioOnsetTrailTests: XCTestCase
         XCTAssertEqual(trail.flashStrength(at: 0.3), 0)
     }
 
-    func testBoundedHistoryAndRewindDiscardPreviousTimeline()
+    func testBoundedHistoryAndRewindDiscardPreviousTimeline() throws
     {
-        let trail = AudioOnsetTrail(capacity: 2)
+        let trail = try AudioOnsetTrail(capacity: 2)
         for eventIndex in 0 ..< 4 { trail.update(at: Double(eventIndex), onset: true, intensity: 1) }
         XCTAssertEqual(trail.count, 2)
         var columns = [Float](repeating: 0, count: 64)
@@ -34,5 +34,16 @@ final class AudioOnsetTrailTests: XCTestCase
         XCTAssertEqual(trail.count, 0)
         columns.withUnsafeMutableBufferPointer { trail.writeColumns(into: $0, at: 0, duration: 4) }
         XCTAssertTrue(columns.allSatisfy { $0 == 0 })
+    }
+
+    func testInvalidCapacityThrowsInsteadOfTerminating()
+    {
+        for capacity in [0, -1, Int.min]
+        {
+            XCTAssertThrowsError(try AudioOnsetTrail(capacity: capacity))
+            {
+                XCTAssertEqual($0 as? AudioOnsetTrailError, .invalidCapacity)
+            }
+        }
     }
 }

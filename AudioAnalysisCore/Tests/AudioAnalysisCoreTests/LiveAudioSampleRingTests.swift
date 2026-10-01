@@ -22,10 +22,12 @@ final class LiveAudioSampleRingTests: XCTestCase
             channels[1][sampleIndex] = 0
         }
 
-        let ring = LiveAudioSampleRing(capacity: 4)
+        let ring = try LiveAudioSampleRing(capacity: 4)
         XCTAssertEqual(ring.droppedSampleCount, 0)
         ring.append(buffer)
         XCTAssertEqual(ring.droppedSampleCount, 2)
+        XCTAssertTrue(ring.take(upTo: 0).isEmpty)
+        XCTAssertTrue(ring.take(upTo: Int.min).isEmpty)
         XCTAssertEqual(ring.take(upTo: 8), [2, 3, 4, 5])
         XCTAssertTrue(ring.take(upTo: 8).isEmpty)
         XCTAssertEqual(ring.droppedSampleCount, 2)
@@ -49,7 +51,7 @@ final class LiveAudioSampleRingTests: XCTestCase
         }
 
         let lock = NSLock()
-        let ring = LiveAudioSampleRing(capacity: 4, lock: lock)
+        let ring = try LiveAudioSampleRing(capacity: 4, lock: lock)
         lock.lock()
         ring.append(buffer)
         XCTAssertEqual(ring.droppedSampleCount, 6)
@@ -60,5 +62,16 @@ final class LiveAudioSampleRingTests: XCTestCase
         XCTAssertEqual(ring.droppedSampleCount, 8)
         XCTAssertEqual(ring.take(upTo: 8), [2, 3, 4, 5])
         XCTAssertEqual(ring.droppedSampleCount, 8)
+    }
+
+    func testInvalidCapacityThrowsInsteadOfTerminating()
+    {
+        for capacity in [0, -1, Int.min]
+        {
+            XCTAssertThrowsError(try LiveAudioSampleRing(capacity: capacity))
+            {
+                XCTAssertEqual($0 as? LiveAudioCaptureError, .invalidBufferCapacity)
+            }
+        }
     }
 }

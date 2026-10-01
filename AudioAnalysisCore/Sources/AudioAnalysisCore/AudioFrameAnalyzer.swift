@@ -7,6 +7,7 @@ public enum AudioFrameAnalyzerError: LocalizedError
     case emptySamples
     case invalidRMSWindow
     case fftSetupUnavailable
+    case fftBuffersUnavailable
 
     public var errorDescription: String?
     {
@@ -20,6 +21,8 @@ public enum AudioFrameAnalyzerError: LocalizedError
                 return "The RMS window must contain samples from the analysis frame."
             case .fftSetupUnavailable:
                 return "The audio FFT analyzer could not be created."
+            case .fftBuffersUnavailable:
+                return "The audio FFT work buffers are unavailable."
         }
     }
 }
@@ -122,18 +125,18 @@ public final class AudioFrameAnalyzer
         let halfSize = Self.fftSize / 2
         let setup = fftSetup
 
-        real.withUnsafeMutableBufferPointer
+        try real.withUnsafeMutableBufferPointer
         { realPointer in
-            imaginary.withUnsafeMutableBufferPointer
+            try imaginary.withUnsafeMutableBufferPointer
             { imaginaryPointer in
-                fftSamples.withUnsafeMutableBufferPointer
+                try fftSamples.withUnsafeMutableBufferPointer
                 { samplePointer in
                     guard let realAddress = realPointer.baseAddress,
                           let imaginaryAddress = imaginaryPointer.baseAddress,
                           let sampleAddress = samplePointer.baseAddress
                     else
                     {
-                        preconditionFailure("The fixed-size FFT work buffers must be nonempty.")
+                        throw AudioFrameAnalyzerError.fftBuffersUnavailable
                     }
                     var splitComplex = DSPSplitComplex(
                         realp: realAddress,

@@ -8,6 +8,7 @@ public enum LiveAudioCaptureError: LocalizedError
     case permissionDenied
     case missingInputDevice
     case unsupportedInputFormat
+    case invalidBufferCapacity
 
     public var errorDescription: String?
     {
@@ -21,6 +22,8 @@ public enum LiveAudioCaptureError: LocalizedError
                 return "The default microphone is unavailable."
             case .unsupportedInputFormat:
                 return "The default microphone did not provide noninterleaved floating-point PCM."
+            case .invalidBufferCapacity:
+                return "Audio sample buffer capacity must be greater than zero."
         }
     }
 }
@@ -85,6 +88,7 @@ public final class LiveAudioCapture
         let format = inputNode.outputFormat(forBus: 0)
         guard format.sampleRate.isFinite,
               format.sampleRate > 0,
+              let inputSampleCountPerSecond = Int(exactly: format.sampleRate.rounded(.towardZero)),
               format.channelCount > 0
         else
         {
@@ -98,8 +102,8 @@ public final class LiveAudioCapture
         }
 
         sampleRate = Float(format.sampleRate)
-        hopSize = max(1, Int(format.sampleRate / Double(framesPerSecond)))
-        let sampleRing = LiveAudioSampleRing(capacity: max(32_768, Int(format.sampleRate)))
+        hopSize = max(1, inputSampleCountPerSecond / framesPerSecond)
+        let sampleRing = try LiveAudioSampleRing(capacity: max(32_768, inputSampleCountPerSecond))
         self.sampleRing = sampleRing
         self.inputNode = inputNode
 
@@ -213,9 +217,9 @@ final class LiveAudioSampleRing: @unchecked Sendable
     private var writeIndex = 0
     private var availableCount = 0
 
-    init(capacity: Int, lock: NSLock = NSLock())
+    init(capacity: Int, lock: NSLock = NSLock()) throws
     {
-        precondition(capacity > 0)
+        guard capacity > 0 else { throw LiveAudioCaptureError.invalidBufferCapacity }
         self.lock = lock
         samples = [Float](repeating: 0, count: capacity)
     }
@@ -266,6 +270,7 @@ final class LiveAudioSampleRing: @unchecked Sendable
 
     func take(upTo maximumCount: Int) -> [Float]
     {
+        guard maximumCount > 0 else { return [] }
         lock.lock()
         defer { lock.unlock() }
         let count = min(maximumCount, availableCount)

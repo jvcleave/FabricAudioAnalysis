@@ -1,5 +1,15 @@
 import Foundation
 
+public enum AudioOnsetTrailError: LocalizedError
+{
+    case invalidCapacity
+
+    public var errorDescription: String?
+    {
+        "Onset trail capacity must be greater than zero."
+    }
+}
+
 /// A bounded history of onset pulses, positioned by scene time rather than
 /// analysis cadence. Repeated evaluations at the same time record only once.
 public final class AudioOnsetTrail
@@ -10,9 +20,19 @@ public final class AudioOnsetTrail
     public private(set) var count = 0
     private var lastUpdateTime: TimeInterval?
 
-    public init(capacity: Int = 512)
+    public convenience init()
     {
-        precondition(capacity > 0)
+        self.init(validatedCapacity: 512)
+    }
+
+    public convenience init(capacity: Int) throws
+    {
+        guard capacity > 0 else { throw AudioOnsetTrailError.invalidCapacity }
+        self.init(validatedCapacity: capacity)
+    }
+
+    private init(validatedCapacity capacity: Int)
+    {
         eventTimes = .init(repeating: 0, count: capacity)
         intensities = .init(repeating: 0, count: capacity)
     }

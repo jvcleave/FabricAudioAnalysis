@@ -37,6 +37,11 @@ microphone without device selection.
 The host application must declare `NSMicrophoneUsageDescription`; Fabric Editor
 does so already.
 
+Invalid capacities and unavailable FFT buffers throw descriptive core errors.
+Live Audio Analysis reports capture and analysis failures as recoverable Fabric
+errors, allowing the rest of the scene to render. The default onset trail uses
+a fixed capacity of 512; creating one with a custom capacity requires `try`.
+
 The [box-scaling example](FabricScenes/README.md) uses Live Audio Analysis's
 Medium Envelope plus 0.35 to scale a rendered box uniformly. The box stays
 visible during silence and grows as the envelope rises. Onset flashes the

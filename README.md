@@ -31,7 +31,8 @@ does so already.
 
 The [box-scaling example](FabricScenes/README.md) uses Live Audio Analysis's
 Medium Envelope plus 0.35 to scale a rendered box uniformly. The box stays
-visible during silence and grows as the envelope rises.
+visible during silence and grows as the envelope rises. Onset flashes the
+box red for at least 0.2 seconds before returning to white.
 
 ## Node port reference
 
@@ -98,8 +99,8 @@ When replacing an earlier development bundle, move it out of Fabric's
 same Live Audio Analysis node name, so installing both causes a registration
 conflict. This plug-in uses the identifier `com.jvclabs.FabricAudioAnalysis`.
 
-After building, check registration, graph save/reopen, and uniform box scaling
-through Fabric's own `NodeRegistry`:
+After building, check registration, graph save/reopen, uniform box scaling,
+and onset color flashes through Fabric's own `NodeRegistry`:
 
 ```sh
 sh PluginVerification/verify.sh
@@ -110,8 +111,9 @@ package lock. Refresh it from that checkout when updating the host revision.
 The verification script prepares a local Sparkle copy needed by Fabric's
 command-line host executable; it does not change the Fabric checkout. It also
 accepts `FABRIC_SPM_SCRATCH_PATH` to reuse an existing compatible Fabric build.
-The box check disables microphone capture and supplies an envelope value, so
-it can verify the saved scene without requesting microphone access.
+The box check disables microphone capture and supplies envelope and onset
+values, so it can verify scaling and the red flash without requesting
+microphone access.
 
 Restart Fabric Editor after updating the installed bundle; its registry loads
 external plug-ins at startup.

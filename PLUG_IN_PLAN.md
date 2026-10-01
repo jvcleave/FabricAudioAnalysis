@@ -63,7 +63,8 @@ error. Preserve the newest measurements when no new snapshot is available.
   installed-bundle discovery checks.
 - `LiveAudioAnalysis.fabric` reopens with its connections intact and remains
   visible at a uniform scale of 0.35 during silence. A supplied envelope of
-  0.65 changes all scale components to 1.0. Run it in Fabric Editor to verify
-  microphone access and live box scaling.
+  0.65 changes all scale components to 1.0. Onset turns the material red for
+  at least 0.2 seconds before it returns to white. Run it in Fabric Editor to
+  verify microphone access, live box scaling, and onset flashes.
 - The README documents normalization, the default microphone limitation,
   installation, and the Fabric revision used for verification.

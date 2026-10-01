@@ -14,12 +14,18 @@ private enum VerificationError: Error
     case connectionFailed
     case graphRoundTripFailed
     case boxScaleFailed
+    case boxColorFailed(String)
 }
 
-func verifyBoxScaling(in graph: Graph, context: Context, device: MTLDevice) throws
+let restingBoxColor = simd_float4(1, 1, 1, 1)
+let onsetBoxColor = simd_float4(1, 0, 0, 1)
+let onsetFlashDuration: Float = 0.2
+
+func verifyBoxResponse(in graph: Graph, context: Context, device: MTLDevice) throws
 {
     guard let sourceNode = graph.nodes.first(where: { type(of: $0).name == "Live Audio Analysis" }),
           let meshNode = graph.nodes.compactMap({ $0 as? MeshNode }).first,
+          let materialNode = graph.nodes.compactMap({ $0 as? BasicColorMaterialNode }).first,
           let commandQueue = device.makeCommandQueue(),
           meshNode.inputVisible.value == true,
           meshNode.inputVisible.connectedOutlets.isEmpty
@@ -32,8 +38,10 @@ func verifyBoxScaling(in graph: Graph, context: Context, device: MTLDevice) thro
     let renderer = GraphRenderer(context: context, graph: graph)
     try renderer.startExecution()
     defer { renderer.teardown() }
+    var previousTime: TimeInterval = 0
+    var frameNumber = 0
 
-    func executeGraphPass() throws
+    func executeGraphPass(at time: TimeInterval) throws
     {
         guard let commandBuffer = commandQueue.makeCommandBuffer() else
         {
@@ -41,23 +49,36 @@ func verifyBoxScaling(in graph: Graph, context: Context, device: MTLDevice) thro
         }
         try renderer.execute(
             graph: graph,
-            executionInfo: renderer.currentExecutionInfo,
+            executionInfo: GraphExecutionInfo(timing: GraphExecutionTiming(
+                time: time,
+                deltaTime: time - previousTime,
+                displayTime: time,
+                systemTime: time,
+                hostMediaTime: time,
+                frameNumber: frameNumber
+            )),
             renderPassDescriptor: MTLRenderPassDescriptor(),
             commandBuffer: commandBuffer
         )
+        previousTime = time
+        frameNumber += 1
     }
 
-    try executeGraphPass()
+    try executeGraphPass(at: 0)
     guard meshNode.object?.scale == simd_float3(repeating: 0.35),
           meshNode.object?.visible == true
     else
     {
         throw VerificationError.boxScaleFailed
     }
+    guard simd_distance(materialNode.material.color, restingBoxColor) < 0.00001 else
+    {
+        throw VerificationError.boxColorFailed("resting: actual color=\(materialNode.material.color), input color=\(String(describing: materialNode.inputColor.value))")
+    }
 
     let envelope: NodePort<Float> = sourceNode.port(named: "outputMediumEnvelope")
     envelope.send(0.65, force: true)
-    try executeGraphPass()
+    try executeGraphPass(at: 0.01)
     guard meshNode.object?.scale == simd_float3(repeating: 1),
           meshNode.object?.visible == true
     else
@@ -65,6 +86,29 @@ func verifyBoxScaling(in graph: Graph, context: Context, device: MTLDevice) thro
         throw VerificationError.boxScaleFailed
     }
     print("Verified the box stays visible and scales uniformly from 0.35 to 1.0")
+
+    let onset: NodePort<Bool> = sourceNode.port(named: "outputOnset")
+    onset.send(true, force: true)
+    try executeGraphPass(at: 0.02)
+    guard simd_distance(materialNode.material.color, onsetBoxColor) < 0.00001 else
+    {
+        throw VerificationError.boxColorFailed("onset: actual color=\(materialNode.material.color), input color=\(String(describing: materialNode.inputColor.value))")
+    }
+    onset.send(false, force: true)
+    try executeGraphPass(at: 0.12)
+    guard simd_distance(materialNode.material.color, onsetBoxColor) < 0.00001 else
+    {
+        throw VerificationError.boxColorFailed("held onset: actual color=\(materialNode.material.color), input color=\(String(describing: materialNode.inputColor.value))")
+    }
+    try executeGraphPass(at: 0.23)
+    guard simd_distance(materialNode.material.color, restingBoxColor) < 0.00001,
+          meshNode.object?.scale == simd_float3(repeating: 1),
+          meshNode.object?.visible == true
+    else
+    {
+        throw VerificationError.boxColorFailed("released onset: actual color=\(materialNode.material.color), input color=\(String(describing: materialNode.inputColor.value))")
+    }
+    print("Verified an onset flashes the box red for 0.2 seconds before returning to white")
 }
 
 let pluginID = "com.jvclabs.FabricAudioAnalysis"
@@ -134,8 +178,8 @@ if !CommandLine.arguments.contains("--write-samples")
     let sceneDecoder = JSONDecoder()
     sceneDecoder.context = DecoderContext(documentContext: context)
     let existingScene = try sceneDecoder.decode(Graph.self, from: sceneData)
-    guard existingScene.nodes.count == 6,
-          existingScene.connections.count == 7,
+    guard existingScene.nodes.count == 8,
+          existingScene.connections.count == 10,
           existingScene.nodes.contains(where: { type(of: $0).name == "Live Audio Analysis" })
     else
     {
@@ -150,7 +194,7 @@ if !CommandLine.arguments.contains("--write-samples")
         throw VerificationError.graphRoundTripFailed
     }
     print("Opened and round-tripped existing \(fileName) without rewriting it")
-    try verifyBoxScaling(in: reopenedScene, context: context, device: device)
+    try verifyBoxResponse(in: reopenedScene, context: context, device: device)
 }
 
 if CommandLine.arguments.contains("--write-samples")
@@ -178,6 +222,17 @@ if CommandLine.arguments.contains("--write-samples")
     boxNode.offset = CGSize(width: -500, height: 450)
     let materialNode = BasicColorMaterialNode(context: context)
     materialNode.offset = CGSize(width: -200, height: 450)
+    let onsetFlashNode = NumberTriggerNode(context: context)
+    onsetFlashNode.userName = "Onset Flash"
+    onsetFlashNode.inputMinDurationSecs.value = onsetFlashDuration
+    onsetFlashNode.offset = CGSize(width: -500, height: 800)
+    let onsetColorNode = EasingNode(context: context, portType: .Color)
+    onsetColorNode.userName = "Onset Color"
+    let restingColor: ParameterPort<simd_float4> = onsetColorNode.port(named: "inputFrom")
+    let flashColor: ParameterPort<simd_float4> = onsetColorNode.port(named: "inputTo")
+    restingColor.value = restingBoxColor
+    flashColor.value = onsetBoxColor
+    onsetColorNode.offset = CGSize(width: -200, height: 800)
     let meshNode = MeshNode(context: context)
     meshNode.offset = CGSize(width: 150, height: 150)
     sampleGraph.addNode(sourceNode)
@@ -186,6 +241,8 @@ if CommandLine.arguments.contains("--write-samples")
     sampleGraph.addNode(boxNode)
     sampleGraph.addNode(materialNode)
     sampleGraph.addNode(meshNode)
+    sampleGraph.addNode(onsetFlashNode)
+    sampleGraph.addNode(onsetColorNode)
 
     let envelope: NodePort<Float> = sourceNode.port(named: "outputMediumEnvelope")
     guard sampleGraph.connect(envelope, to: scaleOffsetNode.inputNumber1) != nil else
@@ -203,9 +260,14 @@ if CommandLine.arguments.contains("--write-samples")
         }
     }
     let scaleVector: NodePort<simd_float3> = scaleVectorNode.port(named: "outputVector")
+    let onset: NodePort<Bool> = sourceNode.port(named: "outputOnset")
+    let outputColor: NodePort<simd_float4> = onsetColorNode.port(named: "outputValue")
     guard sampleGraph.connect(scaleVector, to: meshNode.inputScale) != nil,
           sampleGraph.connect(boxNode.outputGeometry, to: meshNode.inputGeometry) != nil,
-          sampleGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil
+          sampleGraph.connect(materialNode.outputMaterial, to: meshNode.inputMaterial) != nil,
+          sampleGraph.connect(onset, to: onsetFlashNode.inputTarget) != nil,
+          sampleGraph.connect(onsetFlashNode.outputValue, to: onsetColorNode.inputProgress) != nil,
+          sampleGraph.connect(outputColor, to: materialNode.inputColor) != nil
     else
     {
         throw VerificationError.connectionFailed
@@ -222,8 +284,8 @@ if CommandLine.arguments.contains("--write-samples")
     let sampleDecoder = JSONDecoder()
     sampleDecoder.context = DecoderContext(documentContext: context)
     let reopenedSample = try sampleDecoder.decode(Graph.self, from: readableSample)
-    guard reopenedSample.nodes.count == 6,
-          reopenedSample.connections.count == 7,
+    guard reopenedSample.nodes.count == 8,
+          reopenedSample.connections.count == 10,
           reopenedSample.nodes.contains(where: { type(of: $0).name == "Mesh" }),
           reopenedSample.nodes.contains(where: { type(of: $0).name == "Box Geometry" }),
           reopenedSample.nodes.contains(where: { type(of: $0).name == liveNodeClass.name })
@@ -231,6 +293,6 @@ if CommandLine.arguments.contains("--write-samples")
     {
         throw VerificationError.graphRoundTripFailed
     }
-    try verifyBoxScaling(in: reopenedSample, context: context, device: device)
+    try verifyBoxResponse(in: reopenedSample, context: context, device: device)
     print("Wrote \(fileName)")
 }

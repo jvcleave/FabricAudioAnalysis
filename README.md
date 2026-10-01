@@ -48,6 +48,8 @@ trail, five frequency meters, three envelope rings, RMS and flux peak meters,
 background brightness, and capture readouts. Most visuals use Fabric's existing
 nodes; Waveform Trail handles the layered waveform and scrolling hit markers.
 
+![Live audio analysis dashboard and its node graph in Fabric Editor](FabricScenes/LiveAudioAnalysisAdvanced-screenshot.png)
+
 ## Node port reference
 
 All normalized values are in `0...1`. RMS, frequency bands, and spectral flux

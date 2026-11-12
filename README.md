@@ -8,6 +8,11 @@ acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
 
 ## Fabric version
 
+This tag targets [Fabric Beta 1](https://github.com/Fabric-Project/Fabric/releases/tag/Releases/Beta-1)
+at commit `8f41c3ad1042df7f54ea4bca8f6f54a376d36a84`. Both sample scenes use
+the graph format supported by that release. Build the plug-in against that
+tag and use a source-built Fabric Editor configured to load external plug-ins.
+
 Developed and verified against **Fabric 0.1 (build 15)** from a development source
 checkout at commit
 [940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e](https://github.com/Fabric-Project/Fabric/commit/940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e)

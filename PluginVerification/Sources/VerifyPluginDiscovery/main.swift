@@ -70,9 +70,9 @@ func verifyCaptureOutputs(in graph: Graph, sourceNode: Node, context: Context, d
     waveform.published = false
     graph.rebuildPublishedParameterGroup()
     try executeGraphPass(for: sourceNode)
-    let waveformSink = SampleAndHoldNode(context: context, portType: .Array(portType: .Float))
+    let waveformSink = PassThroughNode<ContiguousArray<Float>>(context: context)
     graph.addNode(waveformSink)
-    let waveformInput: NodePort<ContiguousArray<Float>> = waveformSink.port(named: "inputValue")
+    let waveformInput = waveformSink.input
     guard graph.connect(waveform, to: waveformInput) != nil else
     {
         throw VerificationError.connectionFailed

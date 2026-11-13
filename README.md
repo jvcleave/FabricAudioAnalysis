@@ -3,8 +3,9 @@
 A [Fabric](https://github.com/Fabric-Project/Fabric) plug-in for live microphone
 analysis. It registers **Live Audio Analysis**
 with stable, typed ports for driving audio-reactive graphs, and **Waveform Trail**
-for drawing supplied waveform history and onset pulses. The behavior and
-acceptance checks are in [PLUG_IN_PLAN.md](PLUG_IN_PLAN.md).
+for drawing supplied waveform history and onset pulses. The
+[internal documentation index](docs/internal/INTERNAL_DOCUMENTATION.md) links
+to the plug-in plan and maintainer verification.
 
 ## Fabric version
 
@@ -127,6 +128,8 @@ between analysis frames. Restarting or rewinding the scene clears the markers.
 Onset history is bounded to 512 markers. Three reusable upload buffers keep
 CPU writes separate from submitted GPU work. If all buffers are still in use,
 the node keeps its previous image instead of waiting for the GPU.
+
+## Build and install
 
 Run the focused core checks with:
 

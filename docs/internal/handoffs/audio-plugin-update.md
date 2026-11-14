@@ -1,8 +1,9 @@
 # Handoff for the Audio Analysis update
 
-- Updated 2026-11-14, 01:37 EST
+- Updated 2026-11-14, 02:06 EST
 - Owning repository `FabricAudioAnalysis`
 - Starting revision `6a63f3f` on `codex/audio-plugin-update`
+- Merged revision `3746f11` on `main`
 - Build against Fabric `c1da6639` and Satin `ff825e49`
 
 ## Objective
@@ -12,8 +13,8 @@ and verify the Debug plug-in with the workspace and synthetic scenes.
 
 ## Current milestone
 
-Verify that Live Audio Analysis resumes publishing after an FPS change
-during live capture in the rebuilt Fabric Editor.
+Live verification passed. Live Audio Analysis resumed publishing after an FPS
+change during BlackHole capture in the rebuilt Fabric Editor.
 
 ## Repository state
 
@@ -56,14 +57,12 @@ The rebuilt Editor's FPS stepper changed from 30 to 31 on a test graph with
 capture disabled. A separate check confirmed that an existing panel model
 refreshed to 64 FPS after `Node.setSettings`.
 
-## Remaining issues
+In the advanced scene, BlackHole 2ch at 48 kHz supplied a 440 Hz tone while
+the dashboard showed `RUNNING true`. After changing Analysis FPS from 30 to
+31, the dashboard showed `RUNNING true` and rendered a new 880 Hz tone. The
+test used a copy of the scene under the workspace's `.build/` directory.
 
-The live restart check needs an active input in Fabric Editor. This Mac has a
-built-in microphone set as the default input. BlackHole is optional for routing
-system audio into Fabric.
+## Workspace publication
 
-## Next exact action
-
-Run `FabricScenes/LiveAudioAnalysisAdvanced.fabric` in the staged Editor.
-Once the capture readout shows `RUNNING true`, change Analysis FPS and confirm
-the readout returns to `RUNNING true` and the waveform resumes updating.
+The workspace update pins the Audio Analysis commit containing this record.
+Its plug-in source matches the tested revision `3746f11`.

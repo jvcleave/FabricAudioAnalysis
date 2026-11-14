@@ -5,25 +5,25 @@ import SwiftUI
 @Observable
 final class LiveAudioAnalysisSettingsModel
 {
-    var settings: LiveAudioAnalysisSettings
-    @ObservationIgnored private let updateSettings: (LiveAudioAnalysisSettings) -> Void
+    private(set) var settings: LiveAudioAnalysisSettings
+    @ObservationIgnored private weak var node: LiveAudioAnalysisNode?
 
-    init(
-        settings: LiveAudioAnalysisSettings,
-        updateSettings: @escaping (LiveAudioAnalysisSettings) -> Void
-    )
+    init(node: LiveAudioAnalysisNode)
     {
-        self.settings = settings
-        self.updateSettings = updateSettings
+        self.node = node
+        self.settings = node.liveSettings
     }
 
     func changeFrameRate(_ framesPerSecond: Int)
     {
-        let updatedSettings = LiveAudioAnalysisSettings(
-            analysisFramesPerSecond: framesPerSecond
-        )
-        settings = updatedSettings
-        updateSettings(updatedSettings)
+        node?.setLiveSettings(LiveAudioAnalysisSettings(analysisFramesPerSecond: framesPerSecond))
+        refreshFromNode()
+    }
+
+    func refreshFromNode()
+    {
+        guard let liveSettings = node?.liveSettings, liveSettings != settings else { return }
+        settings = liveSettings
     }
 }
 

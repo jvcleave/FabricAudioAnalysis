@@ -43,6 +43,11 @@ final class LiveAudioAnalysisStore: @unchecked Sendable
         pendingStopTask?.cancel()
     }
 
+    var currentSettings: LiveAudioAnalysisSettings
+    {
+        lock.withLock { settings }
+    }
+
     func replaceSettings(_ newSettings: LiveAudioAnalysisSettings)
     {
         lock.lock()

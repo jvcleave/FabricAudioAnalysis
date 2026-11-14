@@ -11,10 +11,9 @@ to the plug-in plan and maintainer verification.
 
 Developed and verified against **Fabric 0.1 (build 15)** from a development source
 checkout at commit
-[940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e](https://github.com/Fabric-Project/Fabric/commit/940f3e06881f0bcd4812fc8fecbaa1a98c47bf7e)
-(September 29, 2026). The version and build number come from that checkout's
-Xcode project; the commit identifies the exact Fabric source used for plugin
-builds, discovery, scene save/reopen, and advanced-scene GPU verification.
+[c1da66398ae4b28c266e0b3d4ef456d60c97f171](https://github.com/Fabric-Project/Fabric/commit/c1da66398ae4b28c266e0b3d4ef456d60c97f171)
+and its Satin pin `ff825e49`. Verification covers the Debug build, plug-in
+discovery, saved scenes, FPS settings, and Metal rendering in an Iterator.
 
 ## Current state
 
@@ -42,8 +41,8 @@ the node is disabled.
 `Enabled` defaults to true. Capture starts while the graph runs, after macOS
 grants Fabric microphone access, and stops when the graph stops or the node is
 disabled. `Running` and `Sample Rate` report capture status. Settings offer
-analysis FPS (default 30, range 1 to 120). The node uses the system default
-microphone without device selection.
+analysis FPS (default 30, range 1 to 120). Changing FPS restarts active
+capture. The node uses the system default microphone without device selection.
 
 The host application must declare `NSMicrophoneUsageDescription`; Fabric Editor
 does so already.
@@ -125,9 +124,9 @@ between analysis frames. Restarting or rewinding the scene clears the markers.
 | Height | Input | Index (Int) | 320 | Output height, clamped to 32...2048 pixels |
 | Image | Output | Image | — | An opaque RGBA image with a dark grid background |
 
-Onset history is bounded to 512 markers. Three reusable upload buffers keep
-CPU writes separate from submitted GPU work. If all buffers are still in use,
-the node keeps its previous image instead of waiting for the GPU.
+Onset history is bounded to 512 markers. Waveform Trail keeps a read-only
+waveform upload until the input changes. Each dispatch uses its own onset
+columns and publishes a new image, including each evaluation inside an Iterator.
 
 ## Build and install
 
@@ -160,8 +159,10 @@ same Live Audio Analysis node name, so installing both causes a registration
 conflict. This plug-in uses the identifier `com.jvclabs.FabricAudioAnalysis`.
 
 After building, check registration, graph save/reopen, waveform demand,
-uniform box scaling, onset color flashes, and the advanced scene through Fabric's
-own `NodeRegistry`:
+FPS settings, uniform box scaling, onset color flashes, and the advanced scene
+through Fabric's `NodeRegistry`. The verifier also checks five distinct
+Waveform Trail images and their rendered pixels across five Iterator
+evaluations on one Metal command buffer.
 
 ```sh
 sh PluginVerification/verify.sh

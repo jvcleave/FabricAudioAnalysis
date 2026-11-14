@@ -219,7 +219,7 @@ guard let liveNodeClass = registry.nodeClass(pluginID: pluginID, nodeID: "LiveAu
 }
 let pluginNodes = registry.availableNodes.filter { $0.pluginBundleID == pluginID }
 guard pluginNodes.count == 2,
-      registry.nodeClass(pluginID: pluginID, nodeID: "WaveformTrailNode") != nil else
+      let waveformClass = registry.nodeClass(pluginID: pluginID, nodeID: "WaveformTrailNode") else
 {
     throw VerificationError.unexpectedNode(pluginNodes.map(\.nodeName).joined(separator: ", "))
 }
@@ -236,6 +236,8 @@ let context = Context(
     depthPixelFormat: .depth32Float,
     stencilPixelFormat: .invalid
 )
+try verifyWaveformIterator(waveformClass, context: context, retainedReferences: true)
+try verifyWaveformIterator(waveformClass, context: context, retainedReferences: false)
 
 let graph = Graph(context: context)
 let liveNode = liveNodeClass.init(context: context)
@@ -247,10 +249,7 @@ guard graph.connect(rmsOutput, to: numericNode.inputNumber1) != nil else
 {
     throw VerificationError.connectionFailed
 }
-let encodedGraph = try JSONEncoder().encode(graph)
-let decoder = JSONDecoder()
-decoder.context = DecoderContext(documentContext: context)
-let reopenedGraph = try decoder.decode(Graph.self, from: encodedGraph)
+let reopenedGraph = try verifyLiveSettings(liveNode, in: graph, context: context)
 guard reopenedGraph.nodes.count == 2,
       reopenedGraph.connections.count == 1,
       reopenedGraph.nodes.contains(where: { type(of: $0).name == "Live Audio Analysis" })

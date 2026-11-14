@@ -16,9 +16,9 @@ public final class LiveAudioAnalysisNode: Node
         "Analyzes the default microphone while the graph runs and publishes rolling levels, frequency bands, onsets, and envelopes."
     }
 
-    public private(set) var liveSettings: LiveAudioAnalysisSettings
+    public var liveSettings: LiveAudioAnalysisSettings { analysisStore.currentSettings }
     private let analysisStore: LiveAudioAnalysisStore
-    private weak var settingsModel: LiveAudioAnalysisSettingsModel?
+    @MainActor private weak var settingsModel: LiveAudioAnalysisSettingsModel?
     private var lastPublishedState: PublishedState?
     private var lastPublishedWaveform: WaveformPublication?
 
@@ -62,14 +62,12 @@ public final class LiveAudioAnalysisNode: Node
 
     public required init(context: Context)
     {
-        liveSettings = LiveAudioAnalysisSettings()
-        analysisStore = LiveAudioAnalysisStore(settings: liveSettings)
+        analysisStore = LiveAudioAnalysisStore(settings: LiveAudioAnalysisSettings())
         super.init(context: context)
     }
 
     public init(context: Context, settings: LiveAudioAnalysisSettings)
     {
-        liveSettings = settings
         analysisStore = LiveAudioAnalysisStore(settings: settings)
         super.init(context: context)
     }
@@ -77,7 +75,7 @@ public final class LiveAudioAnalysisNode: Node
     public required init(from decoder: any Decoder) throws
     {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        liveSettings = try container.decodeIfPresent(
+        let liveSettings = try container.decodeIfPresent(
             LiveAudioAnalysisSettings.self,
             forKey: .liveSettings
         ) ?? LiveAudioAnalysisSettings()
@@ -94,24 +92,27 @@ public final class LiveAudioAnalysisNode: Node
 
     public func setLiveSettings(_ settings: LiveAudioAnalysisSettings)
     {
-        guard liveSettings != settings else { return }
-        liveSettings = settings
-        analysisStore.replaceSettings(settings)
+        setSettings(settings)
+    }
+
+    public override var settings: (any NodeSettings)? { liveSettings }
+
+    public override func apply(_ settings: any NodeSettings)
+    {
+        guard let liveSettings = settings as? LiveAudioAnalysisSettings else { return }
+        analysisStore.replaceSettings(liveSettings)
         markDirty()
+        performOnMainAsync { [weak self] in self?.settingsModel?.refreshFromNode() }
+        super.apply(settings)
     }
 
     public override func providesSettingsView() -> Bool { true }
 
     public override func settingsView() -> AnyView
     {
-        MainActor.assumeIsolated
+        performOnMainSync
         {
-            let model = settingsModel ?? LiveAudioAnalysisSettingsModel(
-                settings: liveSettings,
-                updateSettings: { [weak self] settings in
-                    self?.setLiveSettings(settings)
-                }
-            )
+            let model = settingsModel ?? LiveAudioAnalysisSettingsModel(node: self)
             settingsModel = model
             return AnyView(LiveAudioAnalysisSettingsView(model: model))
         }

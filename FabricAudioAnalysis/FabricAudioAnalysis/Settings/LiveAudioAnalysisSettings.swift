@@ -1,6 +1,6 @@
-import Foundation
+import Fabric
 
-public struct LiveAudioAnalysisSettings: Codable, Equatable, Sendable
+public struct LiveAudioAnalysisSettings: NodeSettings
 {
     public let analysisFramesPerSecond: Int
 
